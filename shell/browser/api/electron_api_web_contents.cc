@@ -972,7 +972,7 @@ void WebContents::RenderViewDeleted(content::RenderViewHost* render_view_host) {
 
     // When the RVH that has been deleted is the current RVH it means that the
     // the web contents are being closed. This is communicated by this event.
-    // Currently tracked by guest-window-manager.js to destroy the
+    // Currently tracked by guest-window-manager.ts to destroy the
     // BrowserWindow.
     Emit("current-render-view-deleted",
          render_view_host->GetProcess()->GetID());
