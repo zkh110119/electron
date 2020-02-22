@@ -85,15 +85,17 @@ void WindowList::CloseAllWindows() {
   std::reverse(windows.begin(), windows.end());
 #endif
   for (auto* const& window : windows)
-    if (!window->IsClosed())
+    if (window && !window->IsClosed())
       window->Close();
 }
 
 // static
 void WindowList::DestroyAllWindows() {
   WindowVector windows = GetInstance()->windows_;
-  for (auto* const& window : windows)
-    window->CloseImmediately();  // e.g. Destroy()
+  for (auto* const& window : windows) {
+    if (window)
+      window->CloseImmediately();  // e.g. Destroy()
+  }
 }
 
 WindowList::WindowList() = default;
