@@ -10,9 +10,19 @@
 #include "base/environment.h"
 #include "base/files/file_util.h"
 #include "base/nix/xdg_util.h"
+#include "base/no_destructor.h"
 #include "base/process/kill.h"
 #include "base/process/launch.h"
+#include "chrome/browser/chrome_notification_types.h"
 #include "chrome/browser/ui/gtk/gtk_util.h"
+#include "components/dbus/thread_linux/dbus_thread_linux.h"
+#include "content/public/browser/browser_thread.h"
+#include "content/public/browser/notification_observer.h"
+#include "content/public/browser/notification_registrar.h"
+#include "content/public/browser/notification_service.h"
+#include "dbus/bus.h"
+#include "dbus/message.h"
+#include "dbus/object_proxy.h"
 #include "url/gurl.h"
 
 #define ELECTRON_TRASH "ELECTRON_TRASH"
@@ -73,6 +83,87 @@ bool XDGEmail(const std::string& email, const bool wait_for_exit) {
                  platform_util::OpenCallback());
 }
 
+const char kFreedesktopFileManagerName[] = "org.freedesktop.FileManager1";
+const char kFreedesktopFileManagerPath[] = "/org/freedesktop/FileManager1";
+
+const char kMethodShowItems[] = "ShowItems";
+
+class ShowItemHelper : public content::NotificationObserver {
+ public:
+  static ShowItemHelper& GetInstance() {
+    static base::NoDestructor<ShowItemHelper> instance;
+    return *instance;
+  }
+
+  ShowItemHelper() {
+    registrar_.Add(this, chrome::NOTIFICATION_APP_TERMINATING,
+                   content::NotificationService::AllSources());
+  }
+
+  ShowItemHelper(const ShowItemHelper&) = delete;
+  ShowItemHelper& operator=(const ShowItemHelper&) = delete;
+
+  void Observe(int type,
+               const content::NotificationSource& source,
+               const content::NotificationDetails& details) override {
+    DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
+    DCHECK_EQ(chrome::NOTIFICATION_APP_TERMINATING, type);
+    // The browser process is about to exit. Clean up while we still can.
+    if (bus_)
+      bus_->ShutdownOnDBusThreadAndBlock();
+    bus_.reset();
+    filemanager_proxy_ = nullptr;
+  }
+
+  void ShowItemInFolder(const base::FilePath& full_path) {
+    if (!bus_) {
+      // Sets up the D-Bus connection.
+      dbus::Bus::Options bus_options;
+      bus_options.bus_type = dbus::Bus::SESSION;
+      bus_options.connection_type = dbus::Bus::PRIVATE;
+      bus_options.dbus_task_runner = dbus_thread_linux::GetTaskRunner();
+      bus_ = base::MakeRefCounted<dbus::Bus>(bus_options);
+    }
+
+    if (!filemanager_proxy_) {
+      filemanager_proxy_ =
+          bus_->GetObjectProxy(kFreedesktopFileManagerName,
+                               dbus::ObjectPath(kFreedesktopFileManagerPath));
+    }
+
+    dbus::MethodCall show_items_call(kFreedesktopFileManagerName,
+                                     kMethodShowItems);
+    dbus::MessageWriter writer(&show_items_call);
+
+    writer.AppendArrayOfStrings(
+        {"file://" + full_path.value()});  // List of file(s) to highlight.
+    writer.AppendString({});               // startup-id
+
+    filemanager_proxy_->CallMethod(
+        &show_items_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+        base::BindOnce(&ShowItemHelper::ShowItemInFolderResponse,
+                       weak_ptr_factory_.GetWeakPtr(), full_path));
+  }
+
+ private:
+  void ShowItemInFolderResponse(const base::FilePath& full_path,
+                                dbus::Response* response) {
+    if (response)
+      return;
+
+    LOG(ERROR) << "Error calling " << kMethodShowItems;
+    // If the FileManager1 call fails, at least open the parent folder.
+    platform_util::OpenPath(full_path.DirName(), platform_util::OpenCallback());
+  }
+
+  content::NotificationRegistrar registrar_;
+
+  scoped_refptr<dbus::Bus> bus_;
+  dbus::ObjectProxy* filemanager_proxy_ = nullptr;
+
+  base::WeakPtrFactory<ShowItemHelper> weak_ptr_factory_{this};
+};
+
 }  // namespace
 
 namespace platform_util {
@@ -82,7 +173,7 @@ void ShowItemInFolder(const base::FilePath& full_path) {
   if (!base::DirectoryExists(dir))
     return;
 
-  XDGOpen(dir.value(), false, platform_util::OpenCallback());
+  ShowItemHelper::GetInstance().ShowItemInFolder(full_path);
 }
 
 void OpenPath(const base::FilePath& full_path, OpenCallback callback) {
