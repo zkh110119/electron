@@ -60,6 +60,7 @@ async function main () {
   const testChild = cp.spawn('python', options, {
     env: {
       ...process.env,
+      NODE_SKIP_CRYPTO: 'true',
       ELECTRON_RUN_AS_NODE: 'true',
       ELECTRON_EAGER_ASAR_HOOK_FOR_TESTING: 'true'
     },
