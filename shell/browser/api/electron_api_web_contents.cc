@@ -1266,9 +1266,12 @@ void WebContents::DidFinishNavigation(
          frame_process_id, frame_routing_id);
 
     // Do not emit "did-fail-load" for canceled requests.
-    if (code != net::ERR_ABORTED)
+    if (code != net::ERR_ABORTED) {
+      LOG(ERROR) << "Failed to load URL: " << url
+                 << " with error: " << description;
       Emit("did-fail-load", code, description, url, is_main_frame,
            frame_process_id, frame_routing_id);
+    }
   }
 }
 
