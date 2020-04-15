@@ -32,6 +32,7 @@ function getOutDir (options = {}) {
   if (options.outDir || process.env.ELECTRON_OUT_DIR) {
     const outDir = options.outDir || process.env.ELECTRON_OUT_DIR;
     const outPath = path.resolve(SRC_DIR, 'out', outDir);
+    console.log(`Outpath is: ${outPath}`);
 
     // Check that user-set variable is a valid/existing directory
     if (fs.existsSync(outPath)) {

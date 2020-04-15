@@ -12,7 +12,8 @@ steps:
     $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/dist.zip"
     Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
     & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -o"$pwd\out\Default" -y $localArtifactPath
-    dir
+    dir out
+    dir out\Default
   displayName: 'Download and extract dist.zip for test'
   env:
     APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
