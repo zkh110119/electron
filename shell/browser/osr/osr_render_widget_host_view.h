@@ -17,11 +17,8 @@
 #include "base/process/kill.h"
 #include "base/threading/thread.h"
 #include "base/time/time.h"
-#include "components/viz/common/frame_sinks/begin_frame_args.h"
-#include "components/viz/common/frame_sinks/begin_frame_source.h"
 #include "components/viz/common/quads/compositor_frame.h"
 #include "components/viz/common/surfaces/parent_local_surface_id_allocator.h"
-#include "content/browser/frame_host/render_widget_host_view_guest.h"  // nogncheck
 #include "content/browser/renderer_host/delegated_frame_host.h"  // nogncheck
 #include "content/browser/renderer_host/input/mouse_wheel_phase_handler.h"  // nogncheck
 #include "content/browser/renderer_host/render_widget_host_impl.h"  // nogncheck
@@ -39,7 +36,6 @@
 #include "ui/gfx/geometry/point.h"
 
 #include "components/viz/host/host_display_client.h"
-#include "ui/compositor/external_begin_frame_client.h"
 
 #if defined(OS_WIN)
 #include "ui/gfx/win/window_impl.h"
@@ -51,16 +47,15 @@ class CursorManager;
 
 namespace electron {
 
-class AtomCopyFrameGenerator;
-class AtomBeginFrameTimer;
+class ElectronCopyFrameGenerator;
+class ElectronBeginFrameTimer;
 
-class AtomDelegatedFrameHostClient;
+class ElectronDelegatedFrameHostClient;
 
 typedef base::Callback<void(const gfx::Rect&, const SkBitmap&)> OnPaintCallback;
 typedef base::Callback<void(const gfx::Rect&)> OnPopupPaintCallback;
 
 class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
-                                      public ui::ExternalBeginFrameClient,
                                       public ui::CompositorDelegate,
                                       public OffscreenViewProxyObserver {
  public:
@@ -76,9 +71,6 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   content::BrowserAccessibilityManager* CreateBrowserAccessibilityManager(
       content::BrowserAccessibilityDelegate*,
       bool) override;
-
-  void OnDisplayDidFinishFrame(const viz::BeginFrameAck& ack) override;
-  void OnNeedsExternalBeginFrames(bool needs_begin_frames) override;
 
   // content::RenderWidgetHostView:
   void InitAsChild(gfx::NativeView) override;
@@ -101,11 +93,12 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   void SetBackgroundColor(SkColor color) override;
   base::Optional<SkColor> GetBackgroundColor() override;
   void UpdateBackgroundColor() override;
-  bool LockMouse(void) override;
+  blink::mojom::PointerLockResult LockMouse(
+      bool request_unadjusted_movement) override;
+  blink::mojom::PointerLockResult ChangeMouseLock(
+      bool request_unadjusted_movement) override;
   void UnlockMouse(void) override;
   void TakeFallbackContentFrom(content::RenderWidgetHostView* view) override;
-  void SetNeedsBeginFrames(bool needs_begin_frames) override;
-  void SetWantsAnimateOnlyBeginFrames() override;
 #if defined(OS_MACOSX)
   void SetActive(bool active) override;
   void ShowDefinitionForSelection() override;
@@ -114,15 +107,7 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
 #endif  // defined(OS_MACOSX)
 
   // content::RenderWidgetHostViewBase:
-  void DidCreateNewRendererCompositorFrameSink(
-      viz::mojom::CompositorFrameSinkClient* renderer_compositor_frame_sink)
-      override;
-  void SubmitCompositorFrame(
-      const viz::LocalSurfaceId& local_surface_id,
-      viz::CompositorFrame frame,
-      base::Optional<viz::HitTestRegionList> hit_test_region_list) override;
 
-  void ClearCompositorFrame(void) override;
   void ResetFallbackToFirstNavigationSurface() override;
   void InitAsPopup(content::RenderWidgetHostView* rwhv,
                    const gfx::Rect& rect) override;
@@ -140,8 +125,6 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
       const gfx::Size& output_size,
       base::OnceCallback<void(const SkBitmap&)> callback) override;
   void GetScreenInfo(content::ScreenInfo* results) override;
-  void InitAsGuest(content::RenderWidgetHostView*,
-                   content::RenderWidgetHostViewGuest*) override;
   void TransformPointToRootSurface(gfx::PointF* point) override;
   gfx::Rect GetBoundsInRootWindow(void) override;
   viz::SurfaceId GetCurrentSurfaceId() const override;
@@ -172,9 +155,6 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
       ui::Compositor* compositor) override;
 
   bool InstallTransparency();
-
-  void OnBeginFrameTimerTick();
-  void SendBeginFrame(base::TimeTicks frame_time, base::TimeDelta vsync_period);
 
   void CancelWidget();
   void AddGuestHostView(OffScreenRenderWidgetHostView* guest_host);
@@ -236,7 +216,7 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   void SetupFrameRate(bool force);
   void ResizeRootLayer(bool force);
 
-  viz::FrameSinkId AllocateFrameSinkId(bool is_guest_view_hack);
+  viz::FrameSinkId AllocateFrameSinkId();
 
   // Applies background color without notifying the RenderWidget about
   // opaqueness changes.
@@ -285,20 +265,13 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
 
   std::unique_ptr<content::CursorManager> cursor_manager_;
 
-  std::unique_ptr<AtomBeginFrameTimer> begin_frame_timer_;
   OffScreenHostDisplayClient* host_display_client_;
   std::unique_ptr<OffScreenVideoConsumer> video_consumer_;
 
-  // Provides |source_id| for BeginFrameArgs that we create.
-  viz::StubBeginFrameSource begin_frame_source_;
-  uint64_t begin_frame_number_ = viz::BeginFrameArgs::kStartingFrameNumber;
-
-  std::unique_ptr<AtomDelegatedFrameHostClient> delegated_frame_host_client_;
+  std::unique_ptr<ElectronDelegatedFrameHostClient>
+      delegated_frame_host_client_;
 
   content::MouseWheelPhaseHandler mouse_wheel_phase_handler_;
-
-  viz::mojom::CompositorFrameSinkClient* renderer_compositor_frame_sink_ =
-      nullptr;
 
   // Latest capture sequence number which is incremented when the caller
   // requests surfaces be synchronized via

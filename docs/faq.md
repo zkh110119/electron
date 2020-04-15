@@ -64,9 +64,9 @@ require('electron').remote.getGlobal('sharedObject').someProperty = 'new value'
 console.log(require('electron').remote.getGlobal('sharedObject').someProperty)
 ```
 
-## My app's window/tray disappeared after a few minutes.
+## My app's tray disappeared after a few minutes.
 
-This happens when the variable which is used to store the window/tray gets
+This happens when the variable which is used to store the tray gets
 garbage collected.
 
 If you encounter this problem, the following articles may prove helpful:
@@ -79,7 +79,7 @@ code from this:
 
 ```javascript
 const { app, Tray } = require('electron')
-app.on('ready', () => {
+app.whenReady().then(() => {
   const tray = new Tray('/path/to/icon.png')
   tray.setTitle('hello world')
 })
@@ -90,7 +90,7 @@ to this:
 ```javascript
 const { app, Tray } = require('electron')
 let tray = null
-app.on('ready', () => {
+app.whenReady().then(() => {
   tray = new Tray('/path/to/icon.png')
   tray.setTitle('hello world')
 })
@@ -139,32 +139,7 @@ When using Electron's built-in module you might encounter an error like this:
 Uncaught TypeError: Cannot read property 'setZoomLevel' of undefined
 ```
 
-This is because you have the [npm `electron` module][electron-module] installed
-either locally or globally, which overrides Electron's built-in module.
-
-To verify whether you are using the correct built-in module, you can print the
-path of the `electron` module:
-
-```javascript
-console.log(require.resolve('electron'))
-```
-
-and then check if it is in the following form:
-
-```sh
-"/path/to/Electron.app/Contents/Resources/atom.asar/renderer/api/lib/exports/electron.js"
-```
-
-If it is something like `node_modules/electron/index.js`, then you have to
-either remove the npm `electron` module, or rename it.
-
-```sh
-npm uninstall electron
-npm uninstall -g electron
-```
-
-However if you are using the built-in module but still getting this error, it
-is very likely you are using the module in the wrong process. For example
+It is very likely you are using the module in the wrong process. For example
 `electron.app` can only be used in the main process, while `electron.webFrame`
 is only available in renderer processes.
 

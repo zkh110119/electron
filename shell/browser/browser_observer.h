@@ -49,15 +49,16 @@ class BrowserObserver : public base::CheckedObserver {
   virtual void OnWillFinishLaunching() {}
   virtual void OnFinishLaunching(const base::DictionaryValue& launch_info) {}
 
-  // The browser requests HTTP login.
-  virtual void OnLogin(scoped_refptr<LoginHandler> login_handler,
-                       const base::DictionaryValue& request_details) {}
-
   // The browser's accessibility suppport has changed.
   virtual void OnAccessibilitySupportChanged() {}
 
   // The app message loop is ready
   virtual void OnPreMainMessageLoopRun() {}
+
+  // Called just before app threads are created, this is where first access
+  // to in-process GpuDataManager should be made.
+  // Refer https://chromium-review.googlesource.com/c/chromium/src/+/2134864
+  virtual void OnPreCreateThreads() {}
 
 #if defined(OS_MACOSX)
   // The browser wants to report that an user activity will resume. (macOS only)

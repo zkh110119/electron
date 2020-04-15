@@ -6,10 +6,10 @@ Subject: fix: build and expose inspector agent
 Node inspector initialization happens in a different start-up function in node.cc, which we don't call in Electron. This allows for us to use the inspector agent in electron/atom/browser/node_debugger.cc
 
 diff --git a/src/inspector_agent.cc b/src/inspector_agent.cc
-index 2965483dea6244e7123c08c104f399fc023a84e0..b6624300e96daf6041a296fdc1ceeaf579e215cd 100644
+index 94433b75d0fdb2ef902e20a60288995fcbf2bbac..3e865357f409470f15ed29a3f87b717812637c37 100644
 --- a/src/inspector_agent.cc
 +++ b/src/inspector_agent.cc
-@@ -217,7 +217,7 @@ const int CONTEXT_GROUP_ID = 1;
+@@ -222,7 +222,7 @@ const int CONTEXT_GROUP_ID = 1;
  
  std::string GetWorkerLabel(node::Environment* env) {
    std::ostringstream result;
@@ -18,7 +18,7 @@ index 2965483dea6244e7123c08c104f399fc023a84e0..b6624300e96daf6041a296fdc1ceeaf5
    return result.str();
  }
  
-@@ -465,7 +465,7 @@ class NodeInspectorClient : public V8InspectorClient {
+@@ -470,7 +470,7 @@ class NodeInspectorClient : public V8InspectorClient {
      client_ = V8Inspector::create(env->isolate(), this);
      // TODO(bnoordhuis) Make name configurable from src/node.cc.
      std::string name =
@@ -28,7 +28,7 @@ index 2965483dea6244e7123c08c104f399fc023a84e0..b6624300e96daf6041a296fdc1ceeaf5
      info.is_default = true;
      contextCreated(env->context(), info);
 diff --git a/src/inspector_agent.h b/src/inspector_agent.h
-index 4fb544f85bd1453d0705088dfb5511ae32bacad2..ac9352e3fa953e2f4ac0a032c2aacd7353c2cf71 100644
+index 089077370db049a7e6d00ff2bf4d6b61cbc427d9..5594f4ba637c5c890a8226d9face18815c41a97b 100644
 --- a/src/inspector_agent.h
 +++ b/src/inspector_agent.h
 @@ -6,7 +6,9 @@
@@ -51,7 +51,7 @@ index 4fb544f85bd1453d0705088dfb5511ae32bacad2..ac9352e3fa953e2f4ac0a032c2aacd73
    explicit Agent(node::Environment* env);
    ~Agent();
 diff --git a/src/inspector_io.cc b/src/inspector_io.cc
-index 76e481c9530d955a841a19d91b34f03bebaaecfb..8b61d73b8d7cc5d84a61b4a683a28ab1865ad71b 100644
+index 75290317d2fcae8585ac8d91f49add5fdd0d79c0..8af7427c463e98705dc7a6a4c86341faec3620b2 100644
 --- a/src/inspector_io.cc
 +++ b/src/inspector_io.cc
 @@ -13,6 +13,8 @@

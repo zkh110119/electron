@@ -6,7 +6,9 @@
 
 #include <algorithm>
 #include <memory>
+#include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -22,63 +24,57 @@
 #include "content/public/browser/browser_thread.h"
 #include "content/public/common/content_paths.h"
 #include "electron/buildflags/buildflags.h"
-#include "native_mate/dictionary.h"
-#include "shell/common/api/event_emitter_caller.h"
-#include "shell/common/api/locker.h"
-#include "shell/common/atom_command_line.h"
+#include "shell/common/electron_command_line.h"
+#include "shell/common/gin_converters/file_path_converter.h"
+#include "shell/common/gin_helper/dictionary.h"
+#include "shell/common/gin_helper/event_emitter_caller.h"
+#include "shell/common/gin_helper/locker.h"
 #include "shell/common/mac/main_application_bundle.h"
-#include "shell/common/native_mate_converters/file_path_converter.h"
 #include "shell/common/node_includes.h"
 
-#define ELECTRON_BUILTIN_MODULES(V)  \
-  V(atom_browser_app)                \
-  V(atom_browser_auto_updater)       \
-  V(atom_browser_browser_view)       \
-  V(atom_browser_content_tracing)    \
-  V(atom_browser_debugger)           \
-  V(atom_browser_dialog)             \
-  V(atom_browser_download_item)      \
-  V(atom_browser_event)              \
-  V(atom_browser_global_shortcut)    \
-  V(atom_browser_in_app_purchase)    \
-  V(atom_browser_menu)               \
-  V(atom_browser_net)                \
-  V(atom_browser_power_monitor)      \
-  V(atom_browser_power_save_blocker) \
-  V(atom_browser_protocol)           \
-  V(atom_browser_session)            \
-  V(atom_browser_system_preferences) \
-  V(atom_browser_top_level_window)   \
-  V(atom_browser_tray)               \
-  V(atom_browser_web_contents)       \
-  V(atom_browser_web_contents_view)  \
-  V(atom_browser_view)               \
-  V(atom_browser_web_view_manager)   \
-  V(atom_browser_window)             \
-  V(atom_common_asar)                \
-  V(atom_common_clipboard)           \
-  V(atom_common_command_line)        \
-  V(atom_common_crash_reporter)      \
-  V(atom_common_features)            \
-  V(atom_common_native_image)        \
-  V(atom_common_native_theme)        \
-  V(atom_common_notification)        \
-  V(atom_common_screen)              \
-  V(atom_common_shell)               \
-  V(atom_common_v8_util)             \
-  V(atom_renderer_ipc)               \
-  V(atom_renderer_web_frame)
+#define ELECTRON_BUILTIN_MODULES(V)      \
+  V(electron_browser_app)                \
+  V(electron_browser_auto_updater)       \
+  V(electron_browser_browser_view)       \
+  V(electron_browser_content_tracing)    \
+  V(electron_browser_dialog)             \
+  V(electron_browser_event)              \
+  V(electron_browser_event_emitter)      \
+  V(electron_browser_global_shortcut)    \
+  V(electron_browser_in_app_purchase)    \
+  V(electron_browser_menu)               \
+  V(electron_browser_message_port)       \
+  V(electron_browser_net)                \
+  V(electron_browser_power_monitor)      \
+  V(electron_browser_power_save_blocker) \
+  V(electron_browser_protocol)           \
+  V(electron_browser_session)            \
+  V(electron_browser_system_preferences) \
+  V(electron_browser_top_level_window)   \
+  V(electron_browser_tray)               \
+  V(electron_browser_web_contents)       \
+  V(electron_browser_web_contents_view)  \
+  V(electron_browser_view)               \
+  V(electron_browser_web_view_manager)   \
+  V(electron_browser_window)             \
+  V(electron_common_asar)                \
+  V(electron_common_clipboard)           \
+  V(electron_common_command_line)        \
+  V(electron_common_crash_reporter)      \
+  V(electron_common_features)            \
+  V(electron_common_native_image)        \
+  V(electron_common_native_theme)        \
+  V(electron_common_notification)        \
+  V(electron_common_screen)              \
+  V(electron_common_shell)               \
+  V(electron_common_v8_util)             \
+  V(electron_renderer_context_bridge)    \
+  V(electron_renderer_ipc)               \
+  V(electron_renderer_web_frame)
 
-#define ELECTRON_VIEW_MODULES(V) \
-  V(atom_browser_box_layout)     \
-  V(atom_browser_button)         \
-  V(atom_browser_label_button)   \
-  V(atom_browser_layout_manager) \
-  V(atom_browser_md_text_button) \
-  V(atom_browser_resize_area)    \
-  V(atom_browser_text_field)
+#define ELECTRON_VIEWS_MODULES(V) V(electron_browser_image_view)
 
-#define ELECTRON_DESKTOP_CAPTURER_MODULE(V) V(atom_browser_desktop_capturer)
+#define ELECTRON_DESKTOP_CAPTURER_MODULE(V) V(electron_browser_desktop_capturer)
 
 // This is used to load built-in modules. Instead of using
 // __attribute__((constructor)), we call the _register_<modname>
@@ -87,8 +83,8 @@
 // implementation when calling the NODE_LINKED_MODULE_CONTEXT_AWARE.
 #define V(modname) void _register_##modname();
 ELECTRON_BUILTIN_MODULES(V)
-#if BUILDFLAG(ENABLE_VIEW_API)
-ELECTRON_VIEW_MODULES(V)
+#if BUILDFLAG(ENABLE_VIEWS_API)
+ELECTRON_VIEWS_MODULES(V)
 #endif
 #if BUILDFLAG(ENABLE_DESKTOP_CAPTURER)
 ELECTRON_DESKTOP_CAPTURER_MODULE(V)
@@ -120,6 +116,108 @@ void stop_and_close_uv_loop(uv_loop_t* loop) {
 }
 
 bool g_is_initialized = false;
+
+bool IsPackagedApp() {
+  base::FilePath exe_path;
+  base::PathService::Get(base::FILE_EXE, &exe_path);
+  base::FilePath::StringType base_name =
+      base::ToLowerASCII(exe_path.BaseName().value());
+
+#if defined(OS_WIN)
+  return base_name != FILE_PATH_LITERAL("electron.exe");
+#else
+  return base_name != FILE_PATH_LITERAL("electron");
+#endif
+}
+
+// Initialize Node.js cli options to pass to Node.js
+// See https://nodejs.org/api/cli.html#cli_options
+void SetNodeCliFlags() {
+  // Only allow DebugOptions in non-ELECTRON_RUN_AS_NODE mode
+  const std::unordered_set<base::StringPiece, base::StringPieceHash> allowed = {
+      "--inspect",          "--inspect-brk",
+      "--inspect-port",     "--debug",
+      "--debug-brk",        "--debug-port",
+      "--inspect-brk-node", "--inspect-publish-uid",
+  };
+
+  const auto argv = base::CommandLine::ForCurrentProcess()->argv();
+  std::vector<std::string> args;
+
+  // TODO(codebytere): We need to set the first entry in args to the
+  // process name owing to src/node_options-inl.h#L286-L290 but this is
+  // redundant and so should be refactored upstream.
+  args.reserve(argv.size() + 1);
+  args.emplace_back("electron");
+
+  for (const auto& arg : argv) {
+#if defined(OS_WIN)
+    const auto& option = base::UTF16ToUTF8(arg);
+#else
+    const auto& option = arg;
+#endif
+    const auto stripped = base::StringPiece(option).substr(0, option.find('='));
+
+    // Only allow in no-op (--) option or DebugOptions
+    if (allowed.count(stripped) != 0 || stripped == "--")
+      args.push_back(option);
+  }
+
+  std::vector<std::string> errors;
+  const int exit_code = ProcessGlobalArgs(&args, nullptr, &errors,
+                                          node::kDisallowedInEnvironment);
+
+  const std::string err_str = "Error parsing Node.js cli flags ";
+  if (exit_code != 0) {
+    LOG(ERROR) << err_str;
+  } else if (!errors.empty()) {
+    LOG(ERROR) << err_str << base::JoinString(errors, " ");
+  }
+}  // namespace
+
+// Initialize NODE_OPTIONS to pass to Node.js
+// See https://nodejs.org/api/cli.html#cli_node_options_options
+void SetNodeOptions(base::Environment* env) {
+  // Options that are unilaterally disallowed
+  const std::set<std::string> disallowed = {
+      "--openssl-config", "--use-bundled-ca", "--use-openssl-ca",
+      "--force-fips", "--enable-fips"};
+
+  // Subset of options allowed in packaged apps
+  const std::set<std::string> allowed_in_packaged = {"--max-http-header-size",
+                                                     "--http-parser"};
+
+  if (env->HasVar("NODE_OPTIONS")) {
+    std::string options;
+    env->GetVar("NODE_OPTIONS", &options);
+    std::vector<std::string> parts = base::SplitString(
+        options, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+    bool is_packaged_app = IsPackagedApp();
+
+    for (const auto& part : parts) {
+      // Strip off values passed to individual NODE_OPTIONs
+      std::string option = part.substr(0, part.find('='));
+
+      if (is_packaged_app &&
+          allowed_in_packaged.find(option) == allowed_in_packaged.end()) {
+        // Explicitly disallow majority of NODE_OPTIONS in packaged apps
+        LOG(ERROR) << "Most NODE_OPTIONs are not supported in packaged apps."
+                   << " See documentation for more details.";
+        options.erase(options.find(option), part.length());
+      } else if (disallowed.find(option) != disallowed.end()) {
+        // Remove NODE_OPTIONS specifically disallowed for use in Node.js
+        // through Electron owing to constraints like BoringSSL.
+        LOG(ERROR) << "The NODE_OPTION " << option
+                   << " is not supported in Electron";
+        options.erase(options.find(option), part.length());
+      }
+    }
+
+    // overwrite new NODE_OPTIONS without unsupported variables
+    env->SetVar("NODE_OPTIONS", options);
+  }
+}
 
 }  // namespace
 
@@ -184,8 +282,8 @@ NodeBindings::~NodeBindings() {
 void NodeBindings::RegisterBuiltinModules() {
 #define V(modname) _register_##modname();
   ELECTRON_BUILTIN_MODULES(V)
-#if BUILDFLAG(ENABLE_VIEW_API)
-  ELECTRON_VIEW_MODULES(V)
+#if BUILDFLAG(ENABLE_VIEWS_API)
+  ELECTRON_VIEWS_MODULES(V)
 #endif
 #if BUILDFLAG(ENABLE_DESKTOP_CAPTURER)
   ELECTRON_DESKTOP_CAPTURER_MODULE(V)
@@ -206,11 +304,14 @@ void NodeBindings::Initialize() {
 #if defined(OS_LINUX)
   // Get real command line in renderer process forked by zygote.
   if (browser_env_ != BrowserEnvironment::BROWSER)
-    AtomCommandLine::InitializeFromCommandLine();
+    ElectronCommandLine::InitializeFromCommandLine();
 #endif
 
   // Explicitly register electron's builtin modules.
   RegisterBuiltinModules();
+
+  // Parse and set Node.js cli flags.
+  SetNodeCliFlags();
 
   // pass non-null program name to argv so it doesn't crash
   // trying to index into a nullptr
@@ -221,55 +322,7 @@ void NodeBindings::Initialize() {
   const char** exec_argv = nullptr;
 
   std::unique_ptr<base::Environment> env(base::Environment::Create());
-  if (env->HasVar("NODE_OPTIONS")) {
-    base::FilePath exe_path;
-    base::PathService::Get(base::FILE_EXE, &exe_path);
-#if defined(OS_WIN)
-    std::string path = base::UTF16ToUTF8(exe_path.value());
-#else
-    std::string path = exe_path.value();
-#endif
-    std::transform(path.begin(), path.end(), path.begin(), ::tolower);
-
-#if defined(OS_WIN)
-    const bool is_packaged_app = path == "electron.exe";
-#else
-    const bool is_packaged_app = path == "electron";
-#endif
-
-    // explicitly disallow NODE_OPTIONS in packaged apps
-    if (is_packaged_app) {
-      LOG(WARNING) << "NODE_OPTIONs are not supported in packaged apps";
-      env->SetVar("NODE_OPTIONS", "");
-    } else {
-      const std::vector<std::string> disallowed = {
-          "--openssl-config", "--use-bundled-ca", "--use-openssl-ca",
-          "--force-fips", "--enable-fips"};
-
-      std::string options;
-      env->GetVar("NODE_OPTIONS", &options);
-      std::vector<std::string> parts = base::SplitString(
-          options, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
-
-      // parse passed options for unsupported options
-      // and remove them from the options list
-      std::string new_options = options;
-      for (const auto& disallow : disallowed) {
-        for (const auto& part : parts) {
-          if (part.find(disallow) != std::string::npos) {
-            LOG(WARNING) << "The NODE_OPTION" << disallow
-                         << "is not supported in Electron";
-            new_options.erase(new_options.find(part), part.length());
-            break;
-          }
-        }
-      }
-
-      // overwrite new NODE_OPTIONS without unsupported variables
-      if (new_options != options)
-        env->SetVar("NODE_OPTIONS", new_options);
-    }
-  }
+  SetNodeOptions(env.get());
 
   // TODO(codebytere): this is going to be deprecated in the near future
   // in favor of Init(std::vector<std::string>* argv,
@@ -289,15 +342,14 @@ void NodeBindings::Initialize() {
 
 node::Environment* NodeBindings::CreateEnvironment(
     v8::Handle<v8::Context> context,
-    node::MultiIsolatePlatform* platform,
-    bool bootstrap_env) {
+    node::MultiIsolatePlatform* platform) {
 #if defined(OS_WIN)
-  auto& atom_args = AtomCommandLine::argv();
+  auto& atom_args = ElectronCommandLine::argv();
   std::vector<std::string> args(atom_args.size());
   std::transform(atom_args.cbegin(), atom_args.cend(), args.begin(),
                  [](auto& a) { return base::WideToUTF8(a); });
 #else
-  auto args = AtomCommandLine::argv();
+  auto args = ElectronCommandLine::argv();
 #endif
 
   // Feed node the path to initialization script.
@@ -314,7 +366,7 @@ node::Environment* NodeBindings::CreateEnvironment(
       break;
   }
 
-  mate::Dictionary global(context->GetIsolate(), context->Global());
+  gin_helper::Dictionary global(context->GetIsolate(), context->Global());
   // Do not set DOM globals for renderer process.
   // We must set this before the node bootstrapper which is run inside
   // CreateEnvironment
@@ -327,9 +379,10 @@ node::Environment* NodeBindings::CreateEnvironment(
   args.insert(args.begin() + 1, init_script);
 
   std::unique_ptr<const char*[]> c_argv = StringVectorToArgArray(args);
+  isolate_data_ =
+      node::CreateIsolateData(context->GetIsolate(), uv_loop_, platform);
   node::Environment* env = node::CreateEnvironment(
-      node::CreateIsolateData(context->GetIsolate(), uv_loop_, platform),
-      context, args.size(), c_argv.get(), 0, nullptr, bootstrap_env);
+      isolate_data_, context, args.size(), c_argv.get(), 0, nullptr);
   DCHECK(env);
 
   // Clean up the global _noBrowserGlobals that we unironically injected into
@@ -337,7 +390,6 @@ node::Environment* NodeBindings::CreateEnvironment(
   if (browser_env_ != BrowserEnvironment::BROWSER) {
     // We need to bootstrap the env in non-browser processes so that
     // _noBrowserGlobals is read correctly before we remove it
-    DCHECK(bootstrap_env);
     global.Delete("_noBrowserGlobals");
   }
 
@@ -351,7 +403,7 @@ node::Environment* NodeBindings::CreateEnvironment(
     context->GetIsolate()->SetMicrotasksPolicy(v8::MicrotasksPolicy::kScoped);
   }
 
-  mate::Dictionary process(context->GetIsolate(), env->process_object());
+  gin_helper::Dictionary process(context->GetIsolate(), env->process_object());
   process.SetReadOnly("type", process_type);
   process.Set("resourcesPath", resources_path);
   // The path to helper app.
@@ -364,7 +416,7 @@ node::Environment* NodeBindings::CreateEnvironment(
 
 void NodeBindings::LoadEnvironment(node::Environment* env) {
   node::LoadEnvironment(env);
-  mate::EmitEvent(env->isolate(), env->process_object(), "loaded");
+  gin_helper::EmitEvent(env->isolate(), env->process_object(), "loaded");
 }
 
 void NodeBindings::PrepareMessageLoop() {
@@ -395,7 +447,7 @@ void NodeBindings::UvRunOnce() {
     return;
 
   // Use Locker in browser process.
-  mate::Locker locker(env->isolate());
+  gin_helper::Locker locker(env->isolate());
   v8::HandleScope handle_scope(env->isolate());
 
   // Enter node context while dealing with uv events.

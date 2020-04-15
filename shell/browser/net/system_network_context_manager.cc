@@ -11,16 +11,18 @@
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/net/chrome_mojo_proxy_resolver_factory.h"
 #include "content/public/browser/browser_thread.h"
+#include "content/public/browser/cors_exempt_headers.h"
 #include "content/public/browser/network_service_instance.h"
 #include "content/public/common/content_features.h"
 #include "content/public/common/service_names.mojom.h"
 #include "mojo/public/cpp/bindings/associated_interface_ptr.h"
+#include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "net/net_buildflags.h"
 #include "services/network/network_service.h"
-#include "services/network/public/cpp/cross_thread_shared_url_loader_factory_info.h"
+#include "services/network/public/cpp/cross_thread_pending_shared_url_loader_factory.h"
 #include "services/network/public/cpp/features.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
-#include "shell/browser/atom_browser_client.h"
+#include "shell/browser/electron_browser_client.h"
 #include "shell/common/application_info.h"
 #include "shell/common/options_switches.h"
 #include "url/gurl.h"
@@ -68,14 +70,15 @@ class SystemNetworkContextManager::URLLoaderFactoryForSystem
   }
 
   // mojom::URLLoaderFactory implementation:
-  void CreateLoaderAndStart(network::mojom::URLLoaderRequest request,
-                            int32_t routing_id,
-                            int32_t request_id,
-                            uint32_t options,
-                            const network::ResourceRequest& url_request,
-                            network::mojom::URLLoaderClientPtr client,
-                            const net::MutableNetworkTrafficAnnotationTag&
-                                traffic_annotation) override {
+  void CreateLoaderAndStart(
+      mojo::PendingReceiver<network::mojom::URLLoader> request,
+      int32_t routing_id,
+      int32_t request_id,
+      uint32_t options,
+      const network::ResourceRequest& url_request,
+      mojo::PendingRemote<network::mojom::URLLoaderClient> client,
+      const net::MutableNetworkTrafficAnnotationTag& traffic_annotation)
+      override {
     DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     if (!manager_)
       return;
@@ -84,17 +87,18 @@ class SystemNetworkContextManager::URLLoaderFactoryForSystem
         std::move(client), traffic_annotation);
   }
 
-  void Clone(network::mojom::URLLoaderFactoryRequest request) override {
+  void Clone(mojo::PendingReceiver<network::mojom::URLLoaderFactory> receiver)
+      override {
     if (!manager_)
       return;
-    manager_->GetURLLoaderFactory()->Clone(std::move(request));
+    manager_->GetURLLoaderFactory()->Clone(std::move(receiver));
   }
 
   // SharedURLLoaderFactory implementation:
-  std::unique_ptr<network::SharedURLLoaderFactoryInfo> Clone() override {
+  std::unique_ptr<network::PendingSharedURLLoaderFactory> Clone() override {
     DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
-    return std::make_unique<network::CrossThreadSharedURLLoaderFactoryInfo>(
+    return std::make_unique<network::CrossThreadPendingSharedURLLoaderFactory>(
         this);
   }
 
@@ -102,7 +106,7 @@ class SystemNetworkContextManager::URLLoaderFactoryForSystem
 
  private:
   friend class base::RefCounted<URLLoaderFactoryForSystem>;
-  ~URLLoaderFactoryForSystem() override {}
+  ~URLLoaderFactoryForSystem() override = default;
 
   SEQUENCE_CHECKER(sequence_checker_);
   SystemNetworkContextManager* manager_;
@@ -111,7 +115,7 @@ class SystemNetworkContextManager::URLLoaderFactoryForSystem
 };
 
 network::mojom::NetworkContext* SystemNetworkContextManager::GetContext() {
-  if (!network_context_ || network_context_.encountered_error()) {
+  if (!network_context_ || !network_context_.is_connected()) {
     // This should call into OnNetworkServiceCreated(), which will re-create
     // the network service, if needed. There's a chance that it won't be
     // invoked, if the NetworkContext has encountered an error but the
@@ -127,7 +131,7 @@ network::mojom::NetworkContext* SystemNetworkContextManager::GetContext() {
 network::mojom::URLLoaderFactory*
 SystemNetworkContextManager::GetURLLoaderFactory() {
   // Create the URLLoaderFactory as needed.
-  if (url_loader_factory_ && !url_loader_factory_.encountered_error()) {
+  if (url_loader_factory_ && url_loader_factory_.is_connected()) {
     return url_loader_factory_.get();
   }
 
@@ -135,8 +139,9 @@ SystemNetworkContextManager::GetURLLoaderFactory() {
       network::mojom::URLLoaderFactoryParams::New();
   params->process_id = network::mojom::kBrowserProcessId;
   params->is_corb_enabled = false;
-  GetContext()->CreateURLLoaderFactory(mojo::MakeRequest(&url_loader_factory_),
-                                       std::move(params));
+  url_loader_factory_.reset();
+  GetContext()->CreateURLLoaderFactory(
+      url_loader_factory_.BindNewPipeAndPassReceiver(), std::move(params));
   return url_loader_factory_.get();
 }
 
@@ -149,6 +154,10 @@ network::mojom::NetworkContextParamsPtr
 SystemNetworkContextManager::CreateDefaultNetworkContextParams() {
   network::mojom::NetworkContextParamsPtr network_context_params =
       network::mojom::NetworkContextParams::New();
+
+  // This is required to avoid blocking X-Requested-With headers sent by PPAPI
+  // plugins, more info crbug.com/940331
+  content::UpdateCorsExemptHeader(network_context_params.get());
 
   network_context_params->enable_brotli = true;
 
@@ -201,8 +210,10 @@ void SystemNetworkContextManager::OnNetworkServiceCreated(
 
   // The system NetworkContext must be created first, since it sets
   // |primary_network_context| to true.
-  network_service->CreateNetworkContext(MakeRequest(&network_context_),
-                                        CreateNetworkContextParams());
+  network_context_.reset();
+  network_service->CreateNetworkContext(
+      network_context_.BindNewPipeAndPassReceiver(),
+      CreateNetworkContextParams());
 }
 
 network::mojom::NetworkContextParamsPtr
@@ -214,7 +225,7 @@ SystemNetworkContextManager::CreateNetworkContextParams() {
   network_context_params->context_name = std::string("system");
 
   network_context_params->user_agent =
-      electron::AtomBrowserClient::Get()->GetUserAgent();
+      electron::ElectronBrowserClient::Get()->GetUserAgent();
 
   network_context_params->http_cache_enabled = false;
 

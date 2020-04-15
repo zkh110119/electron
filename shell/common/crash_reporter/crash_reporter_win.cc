@@ -13,8 +13,9 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "electron/shell/common/api/api.mojom.h"
+#include "mojo/public/cpp/bindings/associated_remote.h"
 #include "shell/browser/ui/inspectable_web_contents_impl.h"
-#include "shell/common/atom_constants.h"
+#include "shell/common/electron_constants.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
 #include "third_party/crashpad/crashpad/client/crashpad_client.h"
 #include "third_party/crashpad/crashpad/client/crashpad_info.h"
@@ -28,9 +29,17 @@ namespace {
 #if defined(_WIN64)
 int CrashForException(EXCEPTION_POINTERS* info) {
   auto* reporter = crash_reporter::CrashReporterWin::GetInstance();
-  if (reporter->IsInitialized())
+  if (reporter->IsInitialized()) {
     reporter->GetCrashpadClient().DumpAndCrash(info);
-  return EXCEPTION_CONTINUE_SEARCH;
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
+
+  // When there is exception and we do not have crashReporter set up, we just
+  // let the execution continue and crash, which is the default behavior.
+  //
+  // We must not return EXCEPTION_CONTINUE_SEARCH here, as it would end up with
+  // busy loop when there is no exception handler in the program.
+  return EXCEPTION_CONTINUE_EXECUTION;
 }
 #endif
 
@@ -53,7 +62,9 @@ void CrashReporterWin::Init(const std::string& product_name,
                             const std::string& submit_url,
                             const base::FilePath& crashes_dir,
                             bool upload_to_server,
-                            bool skip_system_crash_handler) {
+                            bool skip_system_crash_handler,
+                            bool rate_limit,
+                            bool compress) {
   // check whether crashpad has been initialized.
   // Only need to initialize once.
   if (simple_string_dictionary_)
@@ -62,10 +73,11 @@ void CrashReporterWin::Init(const std::string& product_name,
     base::FilePath handler_path;
     base::PathService::Get(base::FILE_EXE, &handler_path);
 
-    std::vector<std::string> args = {
-        "--no-rate-limit",
-        "--no-upload-gzip",  // not all servers accept gzip
-    };
+    std::vector<std::string> args;
+    if (!rate_limit)
+      args.emplace_back("--no-rate-limit");
+    if (!compress)
+      args.emplace_back("--no-upload-gzip");
     args.push_back(base::StringPrintf("--type=%s", kCrashpadProcess));
     args.push_back(
         base::StringPrintf("--%s=%s", kCrashesDirectoryKey,
@@ -121,10 +133,10 @@ void CrashReporterWin::UpdatePipeName() {
     if (!frame_host)
       continue;
 
-    electron::mojom::ElectronRendererAssociatedPtr electron_ptr;
+    mojo::AssociatedRemote<electron::mojom::ElectronRenderer> electron_renderer;
     frame_host->GetRemoteAssociatedInterfaces()->GetInterface(
-        mojo::MakeRequest(&electron_ptr));
-    electron_ptr->UpdateCrashpadPipeName(pipe_name);
+        &electron_renderer);
+    electron_renderer->UpdateCrashpadPipeName(pipe_name);
   }
 }
 

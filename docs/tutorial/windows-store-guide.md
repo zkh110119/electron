@@ -62,11 +62,9 @@ The output should look roughly like this:
 │   ├── am.pak
 │   ├── ar.pak
 │   ├── [...]
-├── natives_blob.bin
 ├── node.dll
 ├── resources
-│   ├── app
-│   └── atom.asar
+│   └── app.asar
 ├── v8_context_snapshot.bin
 ├── squirrel.exe
 └── ui_resources_200_percent.pak

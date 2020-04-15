@@ -27,7 +27,7 @@
 #include "net/base/net_errors.h"
 #include "net/socket/stream_socket.h"
 #include "net/socket/tcp_server_socket.h"
-#include "shell/browser/atom_paths.h"
+#include "shell/browser/electron_paths.h"
 #include "ui/base/resource/resource_bundle.h"
 
 namespace electron {
@@ -92,17 +92,15 @@ void DevToolsManagerDelegate::StartHttpHandler() {
       CreateSocketFactory(), user_dir, base::FilePath());
 }
 
-DevToolsManagerDelegate::DevToolsManagerDelegate() {}
+DevToolsManagerDelegate::DevToolsManagerDelegate() = default;
 
-DevToolsManagerDelegate::~DevToolsManagerDelegate() {}
+DevToolsManagerDelegate::~DevToolsManagerDelegate() = default;
 
 void DevToolsManagerDelegate::Inspect(content::DevToolsAgentHost* agent_host) {}
 
 void DevToolsManagerDelegate::HandleCommand(
-    content::DevToolsAgentHost* agent_host,
-    content::DevToolsAgentHostClient* client,
-    const std::string& method,
-    const std::string& message,
+    content::DevToolsAgentHostClientChannel* channel,
+    base::span<const uint8_t> message,
     NotHandledCallback callback) {
   std::move(callback).Run(message);
 }

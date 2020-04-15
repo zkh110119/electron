@@ -37,7 +37,8 @@ class NativeWindowViews : public NativeWindow,
                           public views::WidgetObserver,
                           public ui::EventHandler {
  public:
-  NativeWindowViews(const mate::Dictionary& options, NativeWindow* parent);
+  NativeWindowViews(const gin_helper::Dictionary& options,
+                    NativeWindow* parent);
   ~NativeWindowViews() override;
 
   // NativeWindow:
@@ -65,12 +66,15 @@ class NativeWindowViews : public NativeWindow,
   gfx::Rect GetContentBounds() override;
   gfx::Size GetContentSize() override;
   gfx::Rect GetNormalBounds() override;
+  SkColor GetBackgroundColor() override;
   void SetContentSizeConstraints(
       const extensions::SizeConstraints& size_constraints) override;
   void SetResizable(bool resizable) override;
   bool MoveAbove(const std::string& sourceId) override;
   void MoveTop() override;
   bool IsResizable() override;
+  void SetAspectRatio(double aspect_ratio,
+                      const gfx::Size& extra_size) override;
   void SetMovable(bool movable) override;
   bool IsMovable() override;
   void SetMinimizable(bool minimizable) override;
@@ -83,8 +87,7 @@ class NativeWindowViews : public NativeWindow,
   bool IsClosable() override;
   void SetAlwaysOnTop(ui::ZOrderLevel z_order,
                       const std::string& level,
-                      int relativeLevel,
-                      std::string* error) override;
+                      int relativeLevel) override;
   ui::ZOrderLevel GetZOrderLevel() override;
   void Center() override;
   void Invalidate() override;
@@ -106,7 +109,7 @@ class NativeWindowViews : public NativeWindow,
   void SetIgnoreMouseEvents(bool ignore, bool forward) override;
   void SetContentProtection(bool enable) override;
   void SetFocusable(bool focusable) override;
-  void SetMenu(AtomMenuModel* menu_model) override;
+  void SetMenu(ElectronMenuModel* menu_model) override;
   void AddBrowserView(NativeBrowserView* browser_view) override;
   void RemoveBrowserView(NativeBrowserView* browser_view) override;
   void SetParentWindow(NativeWindow* parent) override;
@@ -120,8 +123,7 @@ class NativeWindowViews : public NativeWindow,
   void SetMenuBarVisibility(bool visible) override;
   bool IsMenuBarVisible() override;
 
-  void SetVisibleOnAllWorkspaces(bool visible,
-                                 bool visibleOnFullScreen) override;
+  void SetVisibleOnAllWorkspaces(bool visible) override;
 
   bool IsVisibleOnAllWorkspaces() override;
 
@@ -151,6 +153,10 @@ class NativeWindowViews : public NativeWindow,
   void SetIcon(HICON small_icon, HICON app_icon);
 #elif defined(USE_X11)
   void SetIcon(const gfx::ImageSkia& icon);
+#endif
+
+#if defined(USE_X11)
+  void SetGTKDarkThemeEnabled(bool use_dark_theme);
 #endif
 
   SkRegion* draggable_region() const { return draggable_region_.get(); }
@@ -246,23 +252,6 @@ class NativeWindowViews : public NativeWindow,
 
   gfx::Rect last_normal_placement_bounds_;
 
-  // There's an issue with restore on Windows, that sometimes causes the Window
-  // to receive the wrong size (#2498). To circumvent that, we keep tabs on the
-  // size of the window while in the normal state (not maximized, minimized or
-  // fullscreen), so we restore it correctly.
-  gfx::Rect last_normal_bounds_;
-  gfx::Rect last_normal_bounds_before_move_;
-
-  // last_normal_bounds_ may or may not require update on WM_MOVE. When a
-  // window is maximized, it is moved (WM_MOVE) to maximum size first and then
-  // sized (WM_SIZE). In this case, last_normal_bounds_ should not update. We
-  // keep last_normal_bounds_candidate_ as a candidate which will become valid
-  // last_normal_bounds_ if the moves are consecutive with no WM_SIZE event in
-  // between.
-  gfx::Rect last_normal_bounds_candidate_;
-
-  bool consecutive_moves_;
-
   // In charge of running taskbar related APIs.
   TaskbarHost taskbar_host_;
 
@@ -288,6 +277,9 @@ class NativeWindowViews : public NativeWindow,
 
   // Set to true if the window is always on top and behind the task bar.
   bool behind_task_bar_ = false;
+
+  // Whether to block Chromium from handling window messages.
+  bool block_chromium_message_handler_ = false;
 #endif
 
   // Handles unhandled keyboard messages coming back from the renderer process.

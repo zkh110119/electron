@@ -7,7 +7,7 @@
 #include "ui/aura/client/drag_drop_client.h"
 #include "ui/aura/window.h"
 #include "ui/base/dragdrop/drag_drop_types.h"
-#include "ui/base/dragdrop/file_info.h"
+#include "ui/base/dragdrop/file_info/file_info.h"
 #include "ui/base/dragdrop/os_exchange_data.h"
 #include "ui/display/screen.h"
 #include "ui/gfx/geometry/point.h"
@@ -28,8 +28,9 @@ void DragFileItems(const std::vector<base::FilePath>& files,
       *views::Widget::GetTopLevelWidgetForNativeView(view), data.get());
 
   std::vector<ui::FileInfo> file_infos;
+  file_infos.reserve(files.size());
   for (const base::FilePath& file : files) {
-    file_infos.push_back(ui::FileInfo(file, base::FilePath()));
+    file_infos.emplace_back(file, base::FilePath());
   }
   data->SetFilenames(file_infos);
 

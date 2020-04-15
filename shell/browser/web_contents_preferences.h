@@ -19,7 +19,7 @@ namespace content {
 struct WebPreferences;
 }
 
-namespace mate {
+namespace gin_helper {
 class Dictionary;
 }
 
@@ -33,7 +33,7 @@ class WebContentsPreferences
   static WebContentsPreferences* From(content::WebContents* web_contents);
 
   WebContentsPreferences(content::WebContents* web_contents,
-                         const mate::Dictionary& web_preferences);
+                         const gin_helper::Dictionary& web_preferences);
   ~WebContentsPreferences() override;
 
   // Set WebPreferences defaults onto the JS object.
@@ -58,9 +58,6 @@ class WebContentsPreferences
   // Return true if the particular preference value exists.
   bool GetPreference(base::StringPiece name, std::string* value) const;
 
-  // Whether to enable the remote module
-  bool IsRemoteModuleEnabled() const;
-
   // Returns the preload script path.
   bool GetPreloadPath(base::FilePath::StringType* path) const;
 
@@ -70,7 +67,7 @@ class WebContentsPreferences
 
  private:
   friend class content::WebContentsUserData<WebContentsPreferences>;
-  friend class AtomBrowserClient;
+  friend class ElectronBrowserClient;
 
   // Get WebContents according to process ID.
   static content::WebContents* GetWebContentsFromProcessID(int process_id);

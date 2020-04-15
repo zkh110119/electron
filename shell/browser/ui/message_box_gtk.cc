@@ -2,22 +2,20 @@
 // Use of this source code is governed by the MIT license that can be
 // found in the LICENSE file.
 
+#include "shell/browser/ui/gtk_util.h"
 #include "shell/browser/ui/message_box.h"
-
-#include <glib/gi18n.h>
 
 #include "base/callback.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
-#include "chrome/browser/ui/libgtkui/gtk_util.h"
-#include "chrome/browser/ui/libgtkui/skia_utils_gtk.h"
 #include "shell/browser/browser.h"
 #include "shell/browser/native_window_observer.h"
 #include "shell/browser/native_window_views.h"
 #include "shell/browser/unresponsive_suppressor.h"
 #include "ui/base/glib/glib_signal.h"
+#include "ui/events/platform/x11/x11_event_source.h"
 #include "ui/gfx/image/image_skia.h"
-#include "ui/views/widget/desktop_aura/x11_desktop_handler.h"
+#include "ui/gtk/gtk_util.h"
 
 #define ANSI_FOREGROUND_RED "\x1b[31m"
 #define ANSI_FOREGROUND_BLACK "\x1b[30m"
@@ -57,7 +55,7 @@ class GtkMessageBox : public NativeWindowObserver {
       static constexpr int pixel_width = 48;
       static constexpr int pixel_height = 48;
       GdkPixbuf* pixbuf =
-          libgtkui::GdkPixbufFromSkBitmap(*settings.icon.bitmap());
+          gtk_util::GdkPixbufFromSkBitmap(*settings.icon.bitmap());
       GdkPixbuf* scaled_pixbuf = gdk_pixbuf_scale_simple(
           pixbuf, pixel_width, pixel_height, GDK_INTERP_BILINEAR);
       GtkWidget* w = gtk_image_new_from_pixbuf(scaled_pixbuf);
@@ -92,7 +90,7 @@ class GtkMessageBox : public NativeWindowObserver {
     if (parent_) {
       parent_->AddObserver(this);
       static_cast<NativeWindowViews*>(parent_)->SetEnabled(false);
-      libgtkui::SetGtkTransientForAura(dialog_, parent_->GetNativeWindow());
+      gtk::SetGtkTransientForAura(dialog_, parent_->GetNativeWindow());
       gtk_window_set_modal(GTK_WINDOW(dialog_), TRUE);
     }
   }
@@ -123,13 +121,13 @@ class GtkMessageBox : public NativeWindowObserver {
   const char* TranslateToStock(int id, const std::string& text) {
     const std::string lower = base::ToLowerASCII(text);
     if (lower == "cancel")
-      return _("_Cancel");
+      return gtk_util::kCancelLabel;
     if (lower == "no")
-      return _("_No");
+      return gtk_util::kNoLabel;
     if (lower == "ok")
-      return _("_OK");
+      return gtk_util::kOkLabel;
     if (lower == "yes")
-      return _("_Yes");
+      return gtk_util::kYesLabel;
     return text.c_str();
   }
 

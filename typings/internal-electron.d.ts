@@ -63,11 +63,8 @@ declare namespace Electron {
   }
 
   interface IpcRendererInternal extends Electron.IpcRenderer {
+    invoke<T>(channel: string, ...args: any[]): Promise<T>;
     sendToAll(webContentsId: number, channel: string, ...args: any[]): void
-  }
-
-  interface RemoteInternal extends Electron.Remote {
-    getGuestWebContents(guestInstanceId: number): Electron.WebContents;
   }
 
   interface WebContentsInternal extends Electron.WebContents {
@@ -76,33 +73,33 @@ declare namespace Electron {
   }
 
   const deprecate: ElectronInternal.DeprecationUtil;
+
+  namespace Main {
+    const deprecate: ElectronInternal.DeprecationUtil;
+  }
 }
 
 declare namespace ElectronInternal {
   type DeprecationHandler = (message: string) => void;
   interface DeprecationUtil {
     warnOnce(oldName: string, newName?: string): () => void;
-    setHandler(handler: DeprecationHandler): void;
+    setHandler(handler: DeprecationHandler | null): void;
     getHandler(): DeprecationHandler | null;
     warn(oldName: string, newName: string): void;
     log(message: string): void;
     removeFunction(fn: Function, removedName: string): Function;
-    renameFunction(fn: Function, newName: string): Function;
+    renameFunction(fn: Function, newName: string | Function): Function;
     event(emitter: NodeJS.EventEmitter, oldName: string, newName: string): void;
     fnToProperty(module: any, prop: string, getter: string, setter?: string): void;
-    removeProperty<T, K extends (keyof T & string)>(object: T, propertyName: K): T;
+    removeProperty<T, K extends (keyof T & string)>(object: T, propertyName: K, onlyForValues?: any[]): T;
     renameProperty<T, K extends (keyof T & string)>(object: T, oldName: string, newName: K): T;
     moveAPI(fn: Function, oldUsage: string, newUsage: string): Function;
-
-    promisify<T extends (...args: any[]) => any>(fn: T): T;
-
-    // convertPromiseValue: Temporarily disabled until it's used
-    promisifyMultiArg<T extends (...args: any[]) => any>(fn: T, /*convertPromiseValue: (v: any) => any*/): T;
   }
 
   interface DesktopCapturer {
     startHandling(captureWindow: boolean, captureScreen: boolean, thumbnailSize: Electron.Size, fetchWindowIcons: boolean): void;
-    emit: typeof NodeJS.EventEmitter.prototype.emit | null;
+    _onerror: (error: string) => void;
+    _onfinished: (sources: Electron.DesktopCapturerSource[], fetchWindowIcons: boolean) => void;
   }
 
   interface GetSourcesOptions {
@@ -120,14 +117,30 @@ declare namespace ElectronInternal {
     appIcon: string | null;
   }
 
+  interface KeyWeakMap<K, V> {
+    set(key: K, value: V): void;
+    get(key: K): V | undefined;
+    has(key: K): boolean;
+    remove(key: K): void;
+  }
+
   // Internal IPC has _replyInternal and NO reply method
   interface IpcMainInternalEvent extends Omit<Electron.IpcMainEvent, 'reply'> {
     _replyInternal(...args: any[]): void;
   }
 
   interface IpcMainInternal extends NodeJS.EventEmitter {
+    handle(channel: string, listener: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any): void;
     on(channel: string, listener: (event: IpcMainInternalEvent, ...args: any[]) => void): this;
     once(channel: string, listener: (event: IpcMainInternalEvent, ...args: any[]) => void): this;
+  }
+
+  type ModuleLoader = () => any;
+
+  interface ModuleEntry {
+    name: string;
+    private?: boolean;
+    loader: ModuleLoader;
   }
 
   interface WebFrameInternal extends Electron.WebFrame {
@@ -145,7 +158,7 @@ declare namespace ElectronInternal {
     isMainFrame: boolean;
   }
 
-  abstract class WebViewElement extends HTMLElement {
+  class WebViewElement extends HTMLElement {
     static observedAttributes: Array<string>;
 
     public contentWindow: Window;
@@ -155,8 +168,8 @@ declare namespace ElectronInternal {
     public disconnectedCallback(): void;
 
     // Created in web-view-impl
-    public getWebContents(): Electron.WebContents;
     public getWebContentsId(): number;
+    public capturePage(rect?: Electron.Rectangle): Promise<Electron.NativeImage>;
   }
 }
 

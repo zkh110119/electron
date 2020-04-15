@@ -56,7 +56,7 @@
 #include <stddef.h>
 
 #include "shell/browser/browser.h"
-#include "shell/common/atom_command_line.h"
+#include "shell/common/electron_command_line.h"
 
 #include "base/base_paths.h"
 #include "base/bind.h"
@@ -93,7 +93,6 @@
 #include "content/public/browser/browser_task_traits.h"
 #include "content/public/browser/browser_thread.h"
 #include "net/base/network_interfaces.h"
-#include "ui/base/l10n/l10n_util.h"
 
 #if defined(TOOLKIT_VIEWS) && defined(OS_LINUX) && !defined(OS_CHROMEOS)
 #include "ui/views/linux_ui/linux_ui.h"
@@ -185,7 +184,7 @@ int WaitSocketForRead(int fd, const base::TimeDelta& timeout) {
   FD_ZERO(&read_fds);
   FD_SET(fd, &read_fds);
 
-  return HANDLE_EINTR(select(fd + 1, &read_fds, NULL, NULL, &tv));
+  return HANDLE_EINTR(select(fd + 1, &read_fds, nullptr, nullptr, &tv));
 }
 
 // Read a message from a socket fd, with an optional timeout.
@@ -705,7 +704,7 @@ void ProcessSingleton::LinuxWatcher::SocketReader::FinishWithACK(
   if (shutdown(fd_, SHUT_WR) < 0)
     PLOG(ERROR) << "shutdown() failed";
 
-  base::PostTaskWithTraits(
+  base::PostTask(
       FROM_HERE, {BrowserThread::IO},
       base::BindOnce(&ProcessSingleton::LinuxWatcher::RemoveSocketReader,
                      parent_, this));
@@ -827,7 +826,7 @@ ProcessSingleton::NotifyResult ProcessSingleton::NotifyOtherProcessWithTimeout(
     return PROCESS_NONE;
   to_send.append(current_dir.value());
 
-  const std::vector<std::string>& argv = electron::AtomCommandLine::argv();
+  const std::vector<std::string>& argv = electron::ElectronCommandLine::argv();
   for (std::vector<std::string>::const_iterator it = argv.begin();
        it != argv.end(); ++it) {
     to_send.push_back(kTokenDelimiter);
@@ -885,10 +884,9 @@ ProcessSingleton::NotifyResult ProcessSingleton::NotifyOtherProcessOrCreate() {
 
 void ProcessSingleton::StartListeningOnSocket() {
   watcher_ = new LinuxWatcher(this);
-  base::PostTaskWithTraits(
-      FROM_HERE, {BrowserThread::IO},
-      base::BindOnce(&ProcessSingleton::LinuxWatcher::StartListening, watcher_,
-                     sock_));
+  base::PostTask(FROM_HERE, {BrowserThread::IO},
+                 base::BindOnce(&ProcessSingleton::LinuxWatcher::StartListening,
+                                watcher_, sock_));
 }
 
 void ProcessSingleton::OnBrowserReady() {

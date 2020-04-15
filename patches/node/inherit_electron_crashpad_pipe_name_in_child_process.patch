@@ -6,10 +6,10 @@ Subject: Inherit ELECTRON_CRASHPAD_PIPE_NAME in child process
 This is required for crashReporter to work correctly in node process.
 
 diff --git a/lib/child_process.js b/lib/child_process.js
-index 2f478625c8220fc86c34876c17c8f532d88ba922..9a79e06555b6bf5d970f96bedb2c2146d2c74a48 100644
+index 5ed166e1ed76b830c2d97f8170a4a72841201537..c919527a7c06f87fc5220cb7234368c4686563a3 100644
 --- a/lib/child_process.js
 +++ b/lib/child_process.js
-@@ -107,6 +107,10 @@ function fork(modulePath /* , args, options */) {
+@@ -115,6 +115,10 @@ function fork(modulePath /* , args, options */) {
    options.env = Object.create(options.env || process.env)
    options.env.ELECTRON_RUN_AS_NODE = 1;
  

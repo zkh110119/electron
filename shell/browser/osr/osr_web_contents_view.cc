@@ -33,7 +33,8 @@ void OffScreenWebContentsView::SetWebContents(
     content::WebContents* web_contents) {
   web_contents_ = web_contents;
 
-  RenderViewCreated(web_contents_->GetRenderViewHost());
+  if (GetView())
+    GetView()->InstallTransparency();
 }
 
 void OffScreenWebContentsView::SetNativeWindow(NativeWindow* window) {
@@ -109,13 +110,11 @@ gfx::Rect OffScreenWebContentsView::GetViewBounds() const {
   return GetView() ? GetView()->GetViewBounds() : gfx::Rect();
 }
 
-void OffScreenWebContentsView::CreateView(const gfx::Size& initial_size,
-                                          gfx::NativeView context) {}
+void OffScreenWebContentsView::CreateView(gfx::NativeView context) {}
 
 content::RenderWidgetHostViewBase*
 OffScreenWebContentsView::CreateViewForWidget(
-    content::RenderWidgetHost* render_widget_host,
-    bool is_guest_view_hack) {
+    content::RenderWidgetHost* render_widget_host) {
   if (render_widget_host->GetView()) {
     return static_cast<content::RenderWidgetHostViewBase*>(
         render_widget_host->GetView());
@@ -145,12 +144,6 @@ OffScreenWebContentsView::CreateViewForChildWidget(
 }
 
 void OffScreenWebContentsView::SetPageTitle(const base::string16& title) {}
-
-void OffScreenWebContentsView::RenderViewCreated(
-    content::RenderViewHost* host) {
-  if (GetView())
-    GetView()->InstallTransparency();
-}
 
 void OffScreenWebContentsView::RenderViewReady() {}
 

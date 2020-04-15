@@ -10,9 +10,11 @@ declare_args() {
 
   enable_osr = true
 
-  enable_view_api = false
+  enable_remote_module = true
 
-  enable_pdf_viewer = false
+  enable_views_api = true
+
+  enable_pdf_viewer = true
 
   enable_tts = true
 
@@ -31,4 +33,7 @@ declare_args() {
 
   # Enable Chrome extensions support.
   enable_electron_extensions = false
+
+  # Enable Spellchecker support
+  enable_builtin_spellchecker = true
 }

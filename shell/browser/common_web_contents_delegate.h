@@ -24,7 +24,7 @@ class SequencedTaskRunner;
 
 namespace electron {
 
-class AtomBrowserContext;
+class ElectronBrowserContext;
 class NativeWindow;
 class WebDialogHelper;
 
@@ -42,7 +42,7 @@ class CommonWebContentsDelegate : public content::WebContentsDelegate,
   // Creates a InspectableWebContents object and takes onwership of
   // |web_contents|.
   void InitWithWebContents(content::WebContents* web_contents,
-                           AtomBrowserContext* browser_context,
+                           ElectronBrowserContext* browser_context,
                            bool is_guest);
 
   // Set the window as owner window.
@@ -92,10 +92,10 @@ class CommonWebContentsDelegate : public content::WebContentsDelegate,
   void EnterFullscreenModeForTab(
       content::WebContents* source,
       const GURL& origin,
-      const blink::WebFullscreenOptions& options) override;
+      const blink::mojom::FullscreenOptions& options) override;
   void ExitFullscreenModeForTab(content::WebContents* source) override;
   bool IsFullscreenForTabOrPending(const content::WebContents* source) override;
-  blink::WebSecurityStyle GetSecurityStyle(
+  blink::SecurityStyle GetSecurityStyle(
       content::WebContents* web_contents,
       content::SecurityStyleExplanations* explanations) override;
   bool TakeFocus(content::WebContents* source, bool reverse) override;
@@ -173,7 +173,7 @@ class CommonWebContentsDelegate : public content::WebContentsDelegate,
   scoped_refptr<DevToolsFileSystemIndexer> devtools_file_system_indexer_;
 
   // Make sure BrowserContext is alwasys destroyed after WebContents.
-  scoped_refptr<AtomBrowserContext> browser_context_;
+  scoped_refptr<ElectronBrowserContext> browser_context_;
 
   // The stored InspectableWebContents object.
   // Notice that web_contents_ must be placed after dialog_manager_, so we can

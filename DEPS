@@ -5,16 +5,18 @@ gclient_gn_args = [
   'checkout_android_native_support',
   'checkout_libaom',
   'checkout_nacl',
-  'checkout_oculus_sdk'
+  'checkout_oculus_sdk',
+  'checkout_openxr',
+  'checkout_google_benchmark'
 ]
 
 vars = {
   'chromium_version':
-    '956a430350ccbeb16cf544f79c1990f1eae4d4fe',
+    'c5cbec6b4ac8f405dc5d5e416ffaf640aa3d088a',
   'node_version':
-    'v12.9.0',
+    'v12.16.2',
   'nan_version':
-    '2ee313aaca52e2b478965ac50eb5082520380d1b',
+    '2c4ee8a32a299eada3cd6e468bbd0a473bfea96d',
 
   'boto_version': 'f7574aa6cc2c819430c1f05e9a1a1a666ef8169b',
   'pyyaml_version': '3.12',
@@ -60,11 +62,15 @@ vars = {
     True,
   'checkout_oculus_sdk':
     False,
+  'checkout_openxr':
+    False,
   'build_with_chromium':
     True,
   'checkout_android':
     False,
   'checkout_android_native_support':
+    False,
+  'checkout_google_benchmark':
     False,
 }
 
@@ -111,7 +117,7 @@ hooks = [
     'pattern': 'src/electron/script/update-external-binaries.py',
     'condition': 'download_external_binaries',
     'action': [
-      'python',
+      'python3',
       'src/electron/script/update-external-binaries.py',
     ],
   },

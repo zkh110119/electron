@@ -1,20 +1,21 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Milan Burda <milan.burda@gmail.com>
 Date: Thu, 11 Apr 2019 14:49:20 +0200
-Subject: Add ContentGpuClient::PreCreateMessageLoop() callback
+Subject: add_contentgpuclient_precreatemessageloop_callback.patch
 
+This adds a ContentGpuClient::PreCreateMessageLoop() callback.
 Invoke in GpuMain after SetErrorMode, before starting the message loop.
 Allows Electron to restore WER when ELECTRON_DEFAULT_ERROR_MODE is set.
 
-This should be upstreamed
+This should be upstreamed.
 
 diff --git a/content/gpu/gpu_main.cc b/content/gpu/gpu_main.cc
-index 46d92835eadd6429ea0c6a53c5a39ff04f1c2634..1b99a1e601f4226280cdf1382af555b4d61b92fa 100644
+index 0a96d09d0deca530bc9e3ab649e1a9cc5045b1fb..9b22493abbd81c2f592e75fe32f7ab7efbb281d9 100644
 --- a/content/gpu/gpu_main.cc
 +++ b/content/gpu/gpu_main.cc
-@@ -236,6 +236,10 @@ int GpuMain(const MainFunctionParams& parameters) {
- 
-   logging::SetLogMessageHandler(GpuProcessLogMessageHandler);
+@@ -248,6 +248,10 @@ int GpuMain(const MainFunctionParams& parameters) {
+   // to the GpuProcessHost once the GpuServiceImpl has started.
+   viz::GpuServiceImpl::InstallPreInitializeLogHandler();
  
 +  auto* client = GetContentClient()->gpu();
 +  if (client)
@@ -23,8 +24,8 @@ index 46d92835eadd6429ea0c6a53c5a39ff04f1c2634..1b99a1e601f4226280cdf1382af555b4
    // We are experiencing what appear to be memory-stomp issues in the GPU
    // process. These issues seem to be impacting the task executor and listeners
    // registered to it. Create the task executor on the heap to guard against
-@@ -349,7 +353,6 @@ int GpuMain(const MainFunctionParams& parameters) {
-   GpuProcess gpu_process(io_thread_priority);
+@@ -369,7 +373,6 @@ int GpuMain(const MainFunctionParams& parameters) {
+       }));
  #endif
  
 -  auto* client = GetContentClient()->gpu();
@@ -32,10 +33,10 @@ index 46d92835eadd6429ea0c6a53c5a39ff04f1c2634..1b99a1e601f4226280cdf1382af555b4
      client->PostIOThreadCreated(gpu_process.io_task_runner());
  
 diff --git a/content/public/gpu/content_gpu_client.h b/content/public/gpu/content_gpu_client.h
-index 830d5e89af7bd3ddb409ac7bf9d8eb3109830d41..7d544536ec846c294deb6626f51d5de7846fc5c2 100644
+index 88e80bdaecbdd9000109f638c6d79d8102d0e537..a0c0f17e6642dcd2690c095b95ff2c2de9b6ae4f 100644
 --- a/content/public/gpu/content_gpu_client.h
 +++ b/content/public/gpu/content_gpu_client.h
-@@ -39,6 +39,10 @@ class CONTENT_EXPORT ContentGpuClient {
+@@ -30,6 +30,10 @@ class CONTENT_EXPORT ContentGpuClient {
   public:
    virtual ~ContentGpuClient() {}
  
@@ -43,6 +44,6 @@ index 830d5e89af7bd3ddb409ac7bf9d8eb3109830d41..7d544536ec846c294deb6626f51d5de7
 +  // creating the message loop.
 +  virtual void PreCreateMessageLoop() {}
 +
-   // Initializes the registry. |registry| will be passed to a ConnectionFilter
-   // (which lives on the IO thread). Unlike other childthreads, the client must
-   // register additional interfaces on this registry rather than just creating
+   // Called during initialization once the GpuService has been initialized.
+   virtual void GpuServiceInitialized() {}
+ 

@@ -180,7 +180,7 @@ Some popular `key` and `type`s are:
 ### `systemPreferences.setUserDefault(key, type, value)` _macOS_
 
 * `key` String
-* `type` String - See [`getUserDefault`](#systempreferencesgetuserdefaultkey-type-macos).
+* `type` String - Can be `string`, `boolean`, `integer`, `float`, `double`, `url`, `array` or `dictionary`.
 * `value` String
 
 Set the value of `key` in `NSUserDefaults`.
@@ -291,7 +291,7 @@ This API is only available on macOS 10.14 Mojave or newer.
     * `window-frame` - Window frame.
     * `window-text` - Text in windows.
   * On **macOS**
-    * `alternate-selected-control-text` - The text on a selected surface in a list or table.
+    * `alternate-selected-control-text` - The text on a selected surface in a list or table. _deprecated_
     * `control-background` - The background of a large interface element, such as a browser or table.
     * `control` - The surface of a control.
     * `control-text` -The text of a control that isn’t disabled.
@@ -310,7 +310,7 @@ This API is only available on macOS 10.14 Mojave or newer.
     * `selected-content-background` - The background for selected content in a key window or view.
     * `selected-control` - The surface of a selected control.
     * `selected-control-text` - The text of a selected control.
-    * `selected-menu-item` - The text of a selected menu.
+    * `selected-menu-item-text` - The text of a selected menu.
     * `selected-text-background` - The background of selected text.
     * `selected-text` - Selected text.
     * `separator` - A separator between different sections of content.
@@ -326,7 +326,9 @@ This API is only available on macOS 10.14 Mojave or newer.
     * `window-frame-text` - The text in the window's titlebar area.
 
 Returns `String` - The system color setting in RGB hexadecimal form (`#ABCDEF`).
-See the [Windows docs][windows-colors] and the [MacOS docs][macos-colors] for more details.
+See the [Windows docs][windows-colors] and the [macOS docs][macos-colors] for more details.
+
+The following colors are only available on macOS 10.14: `find-highlight`, `selected-content-background`, `separator`, `unemphasized-selected-content-background`, `unemphasized-selected-text-background`, and `unemphasized-selected-text`.
 
 [windows-colors]:https://msdn.microsoft.com/en-us/library/windows/desktop/ms724371(v=vs.85).aspx
 [macos-colors]:https://developer.apple.com/design/human-interface-guidelines/macos/visual-design/color#dynamic-system-colors
@@ -358,7 +360,7 @@ Returns `Boolean` - `true` if an inverted color scheme (a high contrast color sc
 
 Returns `Boolean` - `true` if a high contrast theme is active, `false` otherwise.
 
-**Depreacted:** Should use the new [`nativeTheme.shouldUseHighContrastColors`](native-theme.md#nativethemeshouldusehighcontrastcolors-macos-windows-readonly) API.
+**Deprecated:** Should use the new [`nativeTheme.shouldUseHighContrastColors`](native-theme.md#nativethemeshouldusehighcontrastcolors-macos-windows-readonly) API.
 
 ### `systemPreferences.getEffectiveAppearance()` _macOS_
 
@@ -366,16 +368,6 @@ Returns `String` - Can be `dark`, `light` or `unknown`.
 
 Gets the macOS appearance setting that is currently applied to your application,
 maps to [NSApplication.effectiveAppearance](https://developer.apple.com/documentation/appkit/nsapplication/2967171-effectiveappearance?language=objc)
-
-Please note that until Electron is built targeting the 10.14 SDK, your application's
-`effectiveAppearance` will default to 'light' and won't inherit the OS preference. In
-the interim in order for your application to inherit the OS preference you must set the
-`NSRequiresAquaSystemAppearance` key in your apps `Info.plist` to `false`.  If you are
-using `electron-packager` or `electron-forge` just set the `enableDarwinDarkMode`
-packager option to `true`.  See the [Electron Packager API](https://github.com/electron/electron-packager/blob/master/docs/api.md#darwindarkmodesupport)
-for more details.
-
-**[Deprecated](modernization/property-updates.md)**
 
 ### `systemPreferences.getAppLevelAppearance()` _macOS_ _Deprecated_
 
@@ -385,8 +377,6 @@ Gets the macOS appearance setting that you have declared you want for
 your application, maps to [NSApplication.appearance](https://developer.apple.com/documentation/appkit/nsapplication/2967170-appearance?language=objc).
 You can use the `setAppLevelAppearance` API to set this value.
 
-**[Deprecated](modernization/property-updates.md)**
-
 ### `systemPreferences.setAppLevelAppearance(appearance)` _macOS_ _Deprecated_
 
 * `appearance` String | null - Can be `dark` or `light`
@@ -394,15 +384,11 @@ You can use the `setAppLevelAppearance` API to set this value.
 Sets the appearance setting for your application, this should override the
 system default and override the value of `getEffectiveAppearance`.
 
-**[Deprecated](modernization/property-updates.md)**
-
 ### `systemPreferences.canPromptTouchID()` _macOS_
 
 Returns `Boolean` - whether or not this device has the ability to use Touch ID.
 
 **NOTE:** This API will return `false` on macOS systems older than Sierra 10.12.2.
-
-**[Deprecated](modernization/property-updates.md)**
 
 ### `systemPreferences.promptTouchID(reason)` _macOS_
 
@@ -432,11 +418,13 @@ Returns `Boolean` - `true` if the current process is a trusted accessibility cli
 
 ### `systemPreferences.getMediaAccessStatus(mediaType)` _macOS_
 
-* `mediaType` String - `microphone` or `camera`.
+* `mediaType` String - Can be `microphone`, `camera` or `screen`.
 
 Returns `String` - Can be `not-determined`, `granted`, `denied`, `restricted` or `unknown`.
 
-This user consent was not required until macOS 10.14 Mojave, so this method will always return `granted` if your system is running 10.13 High Sierra or lower.
+This user consent was not required on macOS 10.13 High Sierra or lower so this method will always return `granted`.
+macOS 10.14 Mojave or higher requires consent for `microphone` and `camera` access.
+macOS 10.15 Catalina or higher requires consent for `screen` access.
 
 ### `systemPreferences.askForMediaAccess(mediaType)` _macOS_
 
@@ -476,11 +464,3 @@ A `String` property that can be `dark`, `light` or `unknown`.
 
 Returns the macOS appearance setting that is currently applied to your application,
 maps to [NSApplication.effectiveAppearance](https://developer.apple.com/documentation/appkit/nsapplication/2967171-effectiveappearance?language=objc)
-
-Please note that until Electron is built targeting the 10.14 SDK, your application's
-`effectiveAppearance` will default to 'light' and won't inherit the OS preference. In
-the interim in order for your application to inherit the OS preference you must set the
-`NSRequiresAquaSystemAppearance` key in your apps `Info.plist` to `false`.  If you are
-using `electron-packager` or `electron-forge` just set the `enableDarwinDarkMode`
-packager option to `true`.  See the [Electron Packager API](https://github.com/electron/electron-packager/blob/master/docs/api.md#darwindarkmodesupport)
-for more details.

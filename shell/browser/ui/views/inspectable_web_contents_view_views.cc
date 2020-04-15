@@ -4,6 +4,8 @@
 
 #include "shell/browser/ui/views/inspectable_web_contents_view_views.h"
 
+#include <memory>
+
 #include <utility>
 
 #include "base/strings/utf_string_conversions.h"
@@ -36,7 +38,7 @@ class DevToolsWindowDelegate : public views::ClientView,
     if (shell->GetDelegate())
       icon_ = shell->GetDelegate()->GetDevToolsWindowIcon();
   }
-  ~DevToolsWindowDelegate() override {}
+  ~DevToolsWindowDelegate() override = default;
 
   // views::WidgetDelegate:
   void DeleteDelegate() override { delete this; }
@@ -85,8 +87,6 @@ InspectableWebContentsViewViews::InspectableWebContentsViewViews(
       devtools_visible_(false),
       devtools_window_delegate_(nullptr),
       title_(base::ASCIIToUTF16("Developer Tools")) {
-  set_owned_by_client();
-
   if (!inspectable_web_contents_->IsGuest() &&
       inspectable_web_contents_->GetWebContents()->GetNativeView()) {
     views::WebView* contents_web_view = new views::WebView(nullptr);
@@ -154,7 +154,7 @@ void InspectableWebContentsViewViews::CloseDevTools() {
     devtools_window_delegate_ = nullptr;
   } else {
     devtools_web_view_->SetVisible(false);
-    devtools_web_view_->SetWebContents(NULL);
+    devtools_web_view_->SetWebContents(nullptr);
     Layout();
   }
 }
@@ -176,8 +176,8 @@ void InspectableWebContentsViewViews::SetIsDocked(bool docked, bool activate) {
   CloseDevTools();
 
   if (!docked) {
-    devtools_window_.reset(new views::Widget);
-    devtools_window_web_view_ = new views::WebView(NULL);
+    devtools_window_ = std::make_unique<views::Widget>();
+    devtools_window_web_view_ = new views::WebView(nullptr);
     devtools_window_delegate_ = new DevToolsWindowDelegate(
         this, devtools_window_web_view_, devtools_window_.get());
 

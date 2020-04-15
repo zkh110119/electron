@@ -15,9 +15,9 @@
 #include "content/public/common/content_switches.h"
 #include "electron/electron_version.h"
 #include "shell/browser/browser.h"
-#include "shell/common/atom_constants.h"
-#include "shell/common/native_mate_converters/file_path_converter.h"
-#include "shell/common/native_mate_converters/map_converter.h"
+#include "shell/common/electron_constants.h"
+#include "shell/common/gin_converters/file_path_converter.h"
+#include "shell/common/gin_helper/dictionary.h"
 
 namespace crash_reporter {
 
@@ -40,7 +40,7 @@ CrashReporter::CrashReporter() {
   // process_type_ will be empty for browser process
 }
 
-CrashReporter::~CrashReporter() {}
+CrashReporter::~CrashReporter() = default;
 
 bool CrashReporter::IsInitialized() {
   return is_initialized_;
@@ -52,12 +52,14 @@ void CrashReporter::Start(const std::string& product_name,
                           const base::FilePath& crashes_dir,
                           bool upload_to_server,
                           bool skip_system_crash_handler,
+                          bool rate_limit,
+                          bool compress,
                           const StringMap& extra_parameters) {
   is_initialized_ = true;
   SetUploadParameters(extra_parameters);
 
   Init(product_name, company_name, submit_url, crashes_dir, upload_to_server,
-       skip_system_crash_handler);
+       skip_system_crash_handler, rate_limit, compress);
 }
 
 void CrashReporter::SetUploadParameters(const StringMap& parameters) {
@@ -93,8 +95,7 @@ CrashReporter::GetUploadedReports(const base::FilePath& crashes_dir) {
       int report_time = 0;
       if (report_item.size() >= 2 &&
           base::StringToInt(report_item[0], &report_time)) {
-        result.push_back(
-            CrashReporter::UploadReportResult(report_time, report_item[1]));
+        result.emplace_back(report_time, report_item[1]);
       }
     }
   }
@@ -106,7 +107,9 @@ void CrashReporter::Init(const std::string& product_name,
                          const std::string& submit_url,
                          const base::FilePath& crashes_dir,
                          bool auto_submit,
-                         bool skip_system_crash_handler) {}
+                         bool skip_system_crash_handler,
+                         bool rate_limit,
+                         bool compress) {}
 
 void CrashReporter::SetUploadParameters() {}
 
@@ -127,7 +130,7 @@ CrashReporter* CrashReporter::GetInstance() {
 }
 #endif
 
-void CrashReporter::StartInstance(const mate::Dictionary& options) {
+void CrashReporter::StartInstance(const gin_helper::Dictionary& options) {
   auto* reporter = GetInstance();
   if (!reporter)
     return;
@@ -142,12 +145,20 @@ void CrashReporter::StartInstance(const mate::Dictionary& options) {
   options.Get("crashesDirectory", &crashes_dir);
   StringMap extra_parameters;
   options.Get("extra", &extra_parameters);
+  bool rate_limit = false;
+  options.Get("rateLimit", &rate_limit);
+  bool compress = false;
+  options.Get("compress", &compress);
 
   extra_parameters["_productName"] = product_name;
   extra_parameters["_companyName"] = company_name;
 
-  reporter->Start(product_name, company_name, submit_url, crashes_dir, true,
-                  false, extra_parameters);
+  bool upload_to_server = true;
+  bool skip_system_crash_handler = false;
+
+  reporter->Start(product_name, company_name, submit_url, crashes_dir,
+                  upload_to_server, skip_system_crash_handler, rate_limit,
+                  compress, extra_parameters);
 }
 
 }  // namespace crash_reporter

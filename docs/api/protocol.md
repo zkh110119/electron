@@ -11,7 +11,7 @@ An example of implementing a protocol that has the same effect as the
 const { app, protocol } = require('electron')
 const path = require('path')
 
-app.on('ready', () => {
+app.whenReady().then(() => {
   protocol.registerFileProtocol('atom', (request, callback) => {
     const url = request.url.substr(7)
     callback({ path: path.normalize(`${__dirname}/${url}`) })
@@ -34,7 +34,7 @@ To have your custom protocol work in combination with a custom session, you need
 const { session, app, protocol } = require('electron')
 const path = require('path')
 
-app.on('ready', () => {
+app.whenReady().then(() => {
   const partition = 'persist:example'
   const ses = session.fromPartition(partition)
 
@@ -389,9 +389,7 @@ which sends a `Buffer` as a response.
       * `url` String
       * `method` String (optional)
       * `session` Session | null (optional)
-      * `uploadData` Object (optional)
-        * `contentType` String - MIME type of the content.
-        * `data` String - Content to be sent.
+      * `uploadData` [ProtocolResponseUploadData](structures/protocol-response-upload-data.md) (optional)
 * `completion` Function (optional)
   * `error` Error
 

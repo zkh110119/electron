@@ -91,6 +91,59 @@ session.defaultSession.on('will-download', (event, item, webContents) => {
 })
 ```
 
+#### Event: 'preconnect'
+
+Returns:
+
+* `event` Event
+* `preconnectUrl` String - The URL being requested for preconnection by the
+  renderer.
+* `allowCredentials` Boolean - True if the renderer is requesting that the
+  connection include credentials (see the
+  [spec](https://w3c.github.io/resource-hints/#preconnect) for more details.)
+
+Emitted when a render process requests preconnection to a URL, generally due to
+a [resource hint](https://w3c.github.io/resource-hints/).
+
+#### Event: 'spellcheck-dictionary-initialized'
+
+Returns:
+
+* `event` Event
+* `languageCode` String - The language code of the dictionary file
+
+Emitted when a hunspell dictionary file has been successfully initialized. This
+occurs after the file has been downloaded.
+
+#### Event: 'spellcheck-dictionary-download-begin'
+
+Returns:
+
+* `event` Event
+* `languageCode` String - The language code of the dictionary file
+
+Emitted when a hunspell dictionary file starts downloading
+
+#### Event: 'spellcheck-dictionary-download-success'
+
+Returns:
+
+* `event` Event
+* `languageCode` String - The language code of the dictionary file
+
+Emitted when a hunspell dictionary file has been successfully downloaded
+
+#### Event: 'spellcheck-dictionary-download-failure'
+
+Returns:
+
+* `event` Event
+* `languageCode` String - The language code of the dictionary file
+
+Emitted when a hunspell dictionary file download fails.  For details
+on the failure you should collect a netlog and inspect the download
+request.
+
 ### Instance Methods
 
 The following methods are available on instances of `Session`:
@@ -112,9 +165,10 @@ Clears the session’s HTTP cache.
     `scheme://host:port`.
   * `storages` String[] (optional) - The types of storages to clear, can contain:
     `appcache`, `cookies`, `filesystem`, `indexdb`, `localstorage`,
-    `shadercache`, `websql`, `serviceworkers`, `cachestorage`.
+    `shadercache`, `websql`, `serviceworkers`, `cachestorage`. If not
+    specified, clear all storage types.
   * `quotas` String[] (optional) - The types of quotas to clear, can contain:
-    `temporary`, `persistent`, `syncable`.
+    `temporary`, `persistent`, `syncable`. If not specified, clear all quotas.
 
 Returns `Promise<void>` - resolves when the storage data has been cleared.
 
@@ -125,9 +179,9 @@ Writes any unwritten DOMStorage data to disk.
 #### `ses.setProxy(config)`
 
 * `config` Object
-  * `pacScript` String - The URL associated with the PAC file.
-  * `proxyRules` String - Rules indicating which proxies to use.
-  * `proxyBypassRules` String - Rules indicating which URLs should
+  * `pacScript` String (optional) - The URL associated with the PAC file.
+  * `proxyRules` String (optional) - Rules indicating which proxies to use.
+  * `proxyBypassRules` String (optional) - Rules indicating which URLs should
     bypass the proxy settings.
 
 Returns `Promise<void>` - Resolves when the proxy setting process is complete.
@@ -238,6 +292,14 @@ window.webContents.session.enableNetworkEmulation({
 window.webContents.session.enableNetworkEmulation({ offline: true })
 ```
 
+#### `ses.preconnect(options)`
+
+* `options` Object
+  * `url` String - URL for preconnect. Only the origin is relevant for opening the socket.
+  * `numSockets` Number (optional) - number of sockets to preconnect. Must be between 1 and 6. Defaults to 1.
+
+Preconnects the given number of sockets to an origin.
+
 #### `ses.disableNetworkEmulation()`
 
 Disables any network emulation already active for the `session`. Resets to
@@ -245,10 +307,11 @@ the original network configuration.
 
 #### `ses.setCertificateVerifyProc(proc)`
 
-* `proc` Function
+* `proc` Function | null
   * `request` Object
     * `hostname` String
     * `certificate` [Certificate](structures/certificate.md)
+    * `validatedCertificate` [Certificate](structures/certificate.md)
     * `verificationResult` String - Verification result from chromium.
     * `errorCode` Integer - Error code.
   * `callback` Function
@@ -384,6 +447,13 @@ example `"en-US,fr,de,ko,zh-CN,ja"`.
 This doesn't affect existing `WebContents`, and each `WebContents` can use
 `webContents.setUserAgent` to override the session-wide user agent.
 
+#### `ses.isPersistent()`
+
+Returns `Boolean` - Whether or not this session is a persistent one. The default
+`webContents` session of a `BrowserWindow` is persistent. When creating a session
+from a partition, session prefixed with `persist:` will be persistent, while others
+will be temporary.
+
 #### `ses.getUserAgent()`
 
 Returns `String` - The user agent for this session.
@@ -394,6 +464,17 @@ Returns `String` - The user agent for this session.
 
 Returns `Promise<Buffer>` - resolves with blob data.
 
+#### `ses.downloadURL(url)`
+
+* `url` String
+
+Initiates a download of the resource at `url`.
+The API will generate a [DownloadItem](download-item.md) that can be accessed
+with the [will-download](#event-will-download) event.
+
+**Note:** This does not perform any security checks that relate to a page's origin,
+unlike [`webContents.downloadURL`](web-contents.md#contentsdownloadurlurl).
+
 #### `ses.createInterruptedDownload(options)`
 
 * `options` Object
@@ -402,8 +483,8 @@ Returns `Promise<Buffer>` - resolves with blob data.
   * `mimeType` String (optional)
   * `offset` Integer - Start range for the download.
   * `length` Integer - Total length of the download.
-  * `lastModified` String - Last-Modified header value.
-  * `eTag` String - ETag header value.
+  * `lastModified` String (optional) - Last-Modified header value.
+  * `eTag` String (optional) - ETag header value.
   * `startTime` Double (optional) - Time when download was started in
     number of seconds since UNIX epoch.
 
@@ -413,9 +494,7 @@ event. The [DownloadItem](download-item.md) will not have any `WebContents` asso
 the initial state will be `interrupted`. The download will start only when the
 `resume` API is called on the [DownloadItem](download-item.md).
 
-#### `ses.clearAuthCache(options)`
-
-* `options` ([RemovePassword](structures/remove-password.md) | [RemoveClientCertificate](structures/remove-client-certificate.md))
+#### `ses.clearAuthCache()`
 
 Returns `Promise<void>` - resolves when the session’s HTTP authentication cache has been cleared.
 
@@ -431,13 +510,143 @@ this session just before normal `preload` scripts run.
 Returns `String[]` an array of paths to preload scripts that have been
 registered.
 
+#### `ses.setSpellCheckerLanguages(languages)`
+
+* `languages` String[] - An array of language codes to enable the spellchecker for.
+
+The built in spellchecker does not automatically detect what language a user is typing in.  In order for the
+spell checker to correctly check their words you must call this API with an array of language codes.  You can
+get the list of supported language codes with the `ses.availableSpellCheckerLanguages` property.
+
+**Note:** On macOS the OS spellchecker is used and will detect your language automatically.  This API is a no-op on macOS.
+
+#### `ses.getSpellCheckerLanguages()`
+
+Returns `String[]` - An array of language codes the spellchecker is enabled for.  If this list is empty the spellchecker
+will fallback to using `en-US`.  By default on launch if this setting is an empty list Electron will try to populate this
+setting with the current OS locale.  This setting is persisted across restarts.
+
+**Note:** On macOS the OS spellchecker is used and has it's own list of languages.  This API is a no-op on macOS.
+
+#### `ses.setSpellCheckerDictionaryDownloadURL(url)`
+
+* `url` String - A base URL for Electron to download hunspell dictionaries from.
+
+By default Electron will download hunspell dictionaries from the Chromium CDN.  If you want to override this
+behavior you can use this API to point the dictionary downloader at your own hosted version of the hunspell
+dictionaries.  We publish a `hunspell_dictionaries.zip` file with each release which contains the files you need
+to host here, the file server must be **case insensitive** you must upload each file twice, once with the case it
+has in the ZIP file and once with the filename as all lower case.
+
+If the files present in `hunspell_dictionaries.zip` are available at `https://example.com/dictionaries/language-code.bdic`
+then you should call this api with `ses.setSpellCheckerDictionaryDownloadURL('https://example.com/dictionaries/')`.  Please
+note the trailing slash.  The URL to the dictionaries is formed as `${url}${filename}`.
+
+**Note:** On macOS the OS spellchecker is used and therefore we do not download any dictionary files.  This API is a no-op on macOS.
+
+#### `ses.listWordsInSpellCheckerDictionary()`
+
+Returns `Promise<String[]>` - An array of all words in app's custom dictionary.
+Resolves when the full dictionary is loaded from disk.
+
+#### `ses.addWordToSpellCheckerDictionary(word)`
+
+* `word` String - The word you want to add to the dictionary
+
+Returns `Boolean` - Whether the word was successfully written to the custom dictionary. This API
+will not work on non-persistent (in-memory) sessions.
+
+**Note:** On macOS and Windows 10 this word will be written to the OS custom dictionary as well
+
+#### `ses.removeWordFromSpellCheckerDictionary(word)`
+
+* `word` String - The word you want to remove from the dictionary
+
+Returns `Boolean` - Whether the word was successfully removed from the custom dictionary. This API
+will not work on non-persistent (in-memory) sessions.
+
+**Note:** On macOS and Windows 10 this word will be removed from the OS custom dictionary as well
+
+#### `ses.loadExtension(path)`
+
+* `path` String - Path to a directory containing an unpacked Chrome extension
+
+Returns `Promise<Extension>` - resolves when the extension is loaded.
+
+This method will raise an exception if the extension could not be loaded. If
+there are warnings when installing the extension (e.g. if the extension
+requests an API that Electron does not support) then they will be logged to the
+console.
+
+Note that Electron does not support the full range of Chrome extensions APIs.
+See [Supported Extensions APIs](extensions.md#supported-extensions-apis) for
+more details on what is supported.
+
+Note that in previous versions of Electron, extensions that were loaded would
+be remembered for future runs of the application. This is no longer the case:
+`loadExtension` must be called on every boot of your app if you want the
+extension to be loaded.
+
+```js
+const { app, session } = require('electron')
+const path = require('path')
+
+app.on('ready', async () => {
+  await session.defaultSession.loadExtension(path.join(__dirname, 'react-devtools'))
+  // Note that in order to use the React DevTools extension, you'll need to
+  // download and unzip a copy of the extension.
+})
+```
+
+This API does not support loading packed (.crx) extensions.
+
+**Note:** This API cannot be called before the `ready` event of the `app` module
+is emitted.
+
+**Note:** Loading extensions into in-memory (non-persistent) sessions is not
+supported and will throw an error.
+
+#### `ses.removeExtension(extensionId)`
+
+* `extensionId` String - ID of extension to remove
+
+Unloads an extension.
+
+**Note:** This API cannot be called before the `ready` event of the `app` module
+is emitted.
+
+#### `ses.getExtension(extensionId)`
+
+* `extensionId` String - ID of extension to query
+
+Returns `Extension` | `null` - The loaded extension with the given ID.
+
+**Note:** This API cannot be called before the `ready` event of the `app` module
+is emitted.
+
+#### `ses.getAllExtensions()`
+
+Returns `Extension[]` - A list of all loaded extensions.
+
+**Note:** This API cannot be called before the `ready` event of the `app` module
+is emitted.
+
 ### Instance Properties
 
 The following properties are available on instances of `Session`:
 
+#### `ses.availableSpellCheckerLanguages` _Readonly_
+
+A `String[]` array which consists of all the known available spell checker languages.  Providing a language
+code to the `setSpellCheckerLanaguages` API that isn't in this array will result in an error.
+
 #### `ses.cookies` _Readonly_
 
 A [`Cookies`](cookies.md) object for this session.
+
+#### `ses.serviceWorkers` _Readonly_
+
+A [`ServiceWorkers`](service-workers.md) object for this session.
 
 #### `ses.webRequest` _Readonly_
 
@@ -451,12 +660,12 @@ A [`Protocol`](protocol.md) object for this session.
 const { app, session } = require('electron')
 const path = require('path')
 
-app.on('ready', function () {
+app.whenReady().then(() => {
   const protocol = session.fromPartition('some-partition').protocol
-  protocol.registerFileProtocol('atom', function (request, callback) {
-    var url = request.url.substr(7)
+  protocol.registerFileProtocol('atom', (request, callback) => {
+    let url = request.url.substr(7)
     callback({ path: path.normalize(`${__dirname}/${url}`) })
-  }, function (error) {
+  }, (error) => {
     if (error) console.error('Failed to register protocol')
   })
 })
@@ -469,7 +678,7 @@ A [`NetLog`](net-log.md) object for this session.
 ```javascript
 const { app, session } = require('electron')
 
-app.on('ready', async function () {
+app.whenReady().then(async () => {
   const netLog = session.fromPartition('some-partition').netLog
   netLog.startLogging('/path/to/net-log')
   // After some network events
