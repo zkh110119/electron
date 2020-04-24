@@ -368,7 +368,7 @@ v8::Local<v8::Promise> Cookies::FlushStore(v8::Isolate* isolate) {
 }
 
 void Cookies::OnCookieChanged(const net::CookieChangeInfo& change) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   Emit("changed", gin::ConvertToV8(isolate, change.cookie),
        gin::ConvertToV8(isolate, change.cause),

@@ -93,7 +93,7 @@ bool ExecuteCodeInTabFunction::CanExecuteScriptOnPage(std::string* error) {
   // tab in the current window.
   CHECK_GE(execute_tab_id_, 0);
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), execute_tab_id_);
+      electron::JavascriptEnvironment::GetIsolate(), execute_tab_id_);
   if (!contents) {
     return false;
   }
@@ -147,7 +147,7 @@ bool ExecuteCodeInTabFunction::CanExecuteScriptOnPage(std::string* error) {
 ScriptExecutor* ExecuteCodeInTabFunction::GetScriptExecutor(
     std::string* error) {
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), execute_tab_id_);
+      electron::JavascriptEnvironment::GetIsolate(), execute_tab_id_);
   if (!contents)
     return nullptr;
   return contents->script_executor();
@@ -171,7 +171,7 @@ ExtensionFunction::ResponseAction TabsGetFunction::Run() {
   int tab_id = params->tab_id;
 
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), tab_id);
+      electron::JavascriptEnvironment::GetIsolate(), tab_id);
   if (!contents)
     return RespondNow(Error("No such tab"));
 
@@ -194,7 +194,7 @@ ExtensionFunction::ResponseAction TabsSetZoomFunction::Run() {
 
   int tab_id = params->tab_id ? *params->tab_id : -1;
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), tab_id);
+      electron::JavascriptEnvironment::GetIsolate(), tab_id);
   if (!contents)
     return RespondNow(Error("No such tab"));
 
@@ -223,7 +223,7 @@ ExtensionFunction::ResponseAction TabsGetZoomFunction::Run() {
 
   int tab_id = params->tab_id ? *params->tab_id : -1;
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), tab_id);
+      electron::JavascriptEnvironment::GetIsolate(), tab_id);
   if (!contents)
     return RespondNow(Error("No such tab"));
 
@@ -240,7 +240,7 @@ ExtensionFunction::ResponseAction TabsGetZoomSettingsFunction::Run() {
 
   int tab_id = params->tab_id ? *params->tab_id : -1;
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), tab_id);
+      electron::JavascriptEnvironment::GetIsolate(), tab_id);
   if (!contents)
     return RespondNow(Error("No such tab"));
 
@@ -266,7 +266,7 @@ ExtensionFunction::ResponseAction TabsSetZoomSettingsFunction::Run() {
 
   int tab_id = params->tab_id ? *params->tab_id : -1;
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), tab_id);
+      electron::JavascriptEnvironment::GetIsolate(), tab_id);
   if (!contents)
     return RespondNow(Error("No such tab"));
 

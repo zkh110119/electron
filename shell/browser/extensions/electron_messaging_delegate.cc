@@ -42,7 +42,7 @@ std::unique_ptr<base::DictionaryValue>
 ElectronMessagingDelegate::MaybeGetTabInfo(content::WebContents* web_contents) {
   if (web_contents) {
     auto* api_contents = electron::api::WebContents::FromWrappedClass(
-        v8::Isolate::GetCurrent(), web_contents);
+        electron::JavascriptEnvironment::GetIsolate(), web_contents);
     if (api_contents) {
       auto tab = std::make_unique<base::DictionaryValue>();
       tab->SetWithoutPathExpansion(
@@ -64,7 +64,7 @@ content::WebContents* ElectronMessagingDelegate::GetWebContentsByTabId(
     content::BrowserContext* browser_context,
     int tab_id) {
   auto* contents = electron::api::WebContents::FromWeakMapID(
-      v8::Isolate::GetCurrent(), tab_id);
+      electron::JavascriptEnvironment::GetIsolate(), tab_id);
   if (!contents) {
     return nullptr;
   }

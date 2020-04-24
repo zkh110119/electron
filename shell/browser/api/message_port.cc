@@ -104,7 +104,7 @@ void MessagePort::Close() {
   if (!HasPendingActivity())
     Unpin();
 
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   v8::Local<v8::Object> self;
   if (GetWrapper(isolate).ToLocal(&self))
@@ -201,7 +201,7 @@ std::vector<blink::MessagePortChannel> MessagePort::DisentanglePorts(
 void MessagePort::Pin() {
   if (!pinned_.IsEmpty())
     return;
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   v8::Local<v8::Value> self;
   if (GetWrapper(isolate).ToLocal(&self)) {
@@ -220,7 +220,7 @@ bool MessagePort::Accept(mojo::Message* mojo_message) {
     return false;
   }
 
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
 
   auto ports = EntanglePorts(isolate, std::move(message.ports));

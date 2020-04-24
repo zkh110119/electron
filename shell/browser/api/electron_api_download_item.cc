@@ -101,7 +101,7 @@ DownloadItem::~DownloadItem() {
 
 bool DownloadItem::CheckAlive() const {
   if (!download_item_) {
-    gin_helper::ErrorThrower(v8::Isolate::GetCurrent())
+    gin_helper::ErrorThrower(JavascriptEnvironment::GetIsolate())
         .ThrowError("DownloadItem used after being destroyed");
     return false;
   }

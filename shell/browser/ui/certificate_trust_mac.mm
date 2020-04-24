@@ -15,6 +15,7 @@
 #include "net/cert/cert_database.h"
 #include "net/cert/x509_util_ios_and_mac.h"
 #include "net/cert/x509_util_mac.h"
+#include "shell/browser/javascript_environment.h"
 #include "shell/browser/native_window.h"
 
 @interface TrustDelegate : NSObject {
@@ -89,8 +90,8 @@ v8::Local<v8::Promise> ShowCertificateTrust(
     electron::NativeWindow* parent_window,
     const scoped_refptr<net::X509Certificate>& cert,
     const std::string& message) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
-  gin_helper::Promise<void> promise(isolate);
+  gin_helper::Promise<void> promise(
+      electron::JavascriptEnvironment::GetIsolate());
   v8::Local<v8::Promise> handle = promise.GetHandle();
 
   auto* sec_policy = SecPolicyCreateBasicX509();

@@ -284,12 +284,13 @@ SimpleURLLoaderWrapper::SimpleURLLoaderWrapper(
 void SimpleURLLoaderWrapper::Pin() {
   // Prevent ourselves from being GC'd until the request is complete.  Must be
   // called after gin::CreateHandle, otherwise the wrapper isn't initialized.
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   pinned_wrapper_.Reset(isolate, GetWrapper(isolate).ToLocalChecked());
 }
 
 void SimpleURLLoaderWrapper::PinBodyGetter(v8::Local<v8::Value> body_getter) {
-  pinned_chunk_pipe_getter_.Reset(v8::Isolate::GetCurrent(), body_getter);
+  pinned_chunk_pipe_getter_.Reset(JavascriptEnvironment::GetIsolate(),
+                                  body_getter);
 }
 
 SimpleURLLoaderWrapper::~SimpleURLLoaderWrapper() {
@@ -421,7 +422,7 @@ gin::Handle<SimpleURLLoaderWrapper> SimpleURLLoaderWrapper::Create(
 void SimpleURLLoaderWrapper::OnDataReceived(base::StringPiece string_piece,
                                             base::OnceClosure resume) {
   DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope handle_scope(isolate);
   auto array_buffer = v8::ArrayBuffer::New(isolate, string_piece.size());
   auto backing_store = array_buffer->GetBackingStore();
@@ -446,7 +447,7 @@ void SimpleURLLoaderWrapper::OnRetry(base::OnceClosure start_retry) {}
 void SimpleURLLoaderWrapper::OnResponseStarted(
     const GURL& final_url,
     const network::mojom::URLResponseHead& response_head) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   gin::Dictionary dict = gin::Dictionary::CreateEmpty(isolate);
   dict.Set("statusCode", response_head.headers->response_code());

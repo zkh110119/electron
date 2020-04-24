@@ -59,7 +59,7 @@ void StreamsPrivateAPI::SendExecuteMimeTypeHandlerEvent(
       handler->handler_url());
   int tab_id = -1;
   auto* api_contents = electron::api::WebContents::FromWrappedClass(
-      v8::Isolate::GetCurrent(), web_contents);
+      electron::JavascriptEnvironment::GetIsolate(), web_contents);
   if (api_contents)
     tab_id = api_contents->ID();
   std::unique_ptr<extensions::StreamContainer> stream_container(

@@ -22,6 +22,7 @@
 #include "content/public/browser/browser_task_traits.h"
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/desktop_media_id.h"
+#include "shell/browser/javascript_environment.h"
 #include "shell/browser/native_browser_view_mac.h"
 #include "shell/browser/ui/cocoa/electron_native_widget_mac.h"
 #include "shell/browser/ui/cocoa/electron_ns_window.h"
@@ -1481,7 +1482,7 @@ void NativeWindowMac::SetVibrancy(const std::string& type) {
 
   std::string dep_warn = " has been deprecated and removed as of macOS 10.15.";
   node::Environment* env =
-      node::Environment::GetCurrent(v8::Isolate::GetCurrent());
+      node::Environment::GetCurrent(JavascriptEnvironment::GetIsolate());
 
   NSVisualEffectMaterial vibrancyType;
 

@@ -5,6 +5,7 @@
 #include "shell/browser/api/ui_event.h"
 
 #include "gin/data_object_builder.h"
+#include "shell/browser/javascript_environment.h"
 #include "ui/events/event_constants.h"
 #include "v8/include/v8.h"
 
@@ -17,9 +18,8 @@ constexpr int mouse_button_flags =
      ui::EF_FORWARD_MOUSE_BUTTON);
 
 v8::Local<v8::Object> CreateEventFromFlags(int flags) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
   const int is_mouse_click = static_cast<bool>(flags & mouse_button_flags);
-  return gin::DataObjectBuilder(isolate)
+  return gin::DataObjectBuilder(JavascriptEnvironment::GetIsolate())
       .Set("shiftKey", static_cast<bool>(flags & ui::EF_SHIFT_DOWN))
       .Set("ctrlKey", static_cast<bool>(flags & ui::EF_CONTROL_DOWN))
       .Set("altKey", static_cast<bool>(flags & ui::EF_ALT_DOWN))

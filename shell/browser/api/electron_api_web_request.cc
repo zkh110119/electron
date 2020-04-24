@@ -119,7 +119,8 @@ v8::Local<v8::Value> HttpResponseHeadersToV8(
       values->Append(value);
     }
   }
-  return gin::ConvertToV8(v8::Isolate::GetCurrent(), response_headers);
+  return gin::ConvertToV8(JavascriptEnvironment::GetIsolate(),
+                          response_headers);
 }
 
 // Overloaded by multiple types to fill the |details| object.
@@ -409,8 +410,8 @@ void WebRequest::HandleSimpleEvent(SimpleEvent event,
   if (!MatchesFilterCondition(request_info, info.url_patterns))
     return;
 
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
-  v8::HandleScope handle_scope(isolate);
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
+  v8::HandleScope scope(isolate);
   gin::Dictionary details(isolate, v8::Object::New(isolate));
   FillDetails(&details, request_info, args...);
   info.listener.Run(gin::ConvertToV8(isolate, details));
@@ -432,8 +433,8 @@ int WebRequest::HandleResponseEvent(ResponseEvent event,
 
   callbacks_[request_info->id] = std::move(callback);
 
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
-  v8::HandleScope handle_scope(isolate);
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
+  v8::HandleScope scope(isolate);
   gin::Dictionary details(isolate, v8::Object::New(isolate));
   FillDetails(&details, request_info, args...);
 
@@ -454,7 +455,7 @@ void WebRequest::OnListenerResult(uint64_t id,
 
   int result = net::OK;
   if (response->IsObject()) {
-    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
     gin::Dictionary dict(isolate, response.As<v8::Object>());
 
     bool cancel = false;

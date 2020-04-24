@@ -10,6 +10,7 @@
 
 #include "gin/converter.h"
 #include "gin/wrappable.h"
+#include "shell/browser/javascript_environment.h"
 
 namespace gin_helper {
 
@@ -82,7 +83,7 @@ template <typename T, typename... Args>
 v8::Local<v8::Value> CallMethod(gin::Wrappable<T>* object,
                                 const char* method_name,
                                 Args&&... args) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = electron::JavascriptEnvironment::GetIsolate();
   return CallMethod(isolate, object, method_name, std::forward<Args>(args)...);
 }
 

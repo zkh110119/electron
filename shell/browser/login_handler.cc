@@ -50,7 +50,7 @@ void LoginHandler::EmitEvent(
     const GURL& url,
     scoped_refptr<net::HttpResponseHeaders> response_headers,
     bool first_auth_attempt) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
 
   auto api_web_contents = api::WebContents::From(isolate, web_contents());

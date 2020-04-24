@@ -1303,7 +1303,7 @@ bool ElectronBrowserClient::WillInterceptWebSocket(
   if (!frame)
     return false;
 
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   auto* browser_context = frame->GetProcess()->GetBrowserContext();
   auto web_request = api::WebRequest::FromOrCreate(isolate, browser_context);
@@ -1324,7 +1324,7 @@ void ElectronBrowserClient::CreateWebSocket(
     const base::Optional<std::string>& user_agent,
     mojo::PendingRemote<network::mojom::WebSocketHandshakeClient>
         handshake_client) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   auto* browser_context = frame->GetProcess()->GetBrowserContext();
   auto web_request = api::WebRequest::FromOrCreate(isolate, browser_context);
@@ -1350,7 +1350,7 @@ bool ElectronBrowserClient::WillCreateURLLoaderFactory(
     bool* bypass_redirect_checks,
     bool* disable_secure_dns,
     network::mojom::URLLoaderFactoryOverridePtr* factory_override) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   auto web_request = api::WebRequest::FromOrCreate(isolate, browser_context);
   DCHECK(web_request.get());

@@ -28,7 +28,7 @@ ElectronNavigationThrottle::WillRedirectRequest() {
     return PROCEED;
   }
 
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
   auto api_contents = electron::api::WebContents::From(isolate, contents);
   if (api_contents.IsEmpty()) {

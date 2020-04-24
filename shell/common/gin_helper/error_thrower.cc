@@ -5,15 +5,14 @@
 #include "shell/common/gin_helper/error_thrower.h"
 
 #include "gin/converter.h"
+#include "shell/browser/javascript_environment.h"
 
 namespace gin_helper {
 
 ErrorThrower::ErrorThrower(v8::Isolate* isolate) : isolate_(isolate) {}
 
-// This constructor should be rarely if ever used, since
-// v8::Isolate::GetCurrent() uses atomic loads and is thus a bit
-// costly to invoke
-ErrorThrower::ErrorThrower() : isolate_(v8::Isolate::GetCurrent()) {}
+ErrorThrower::ErrorThrower()
+    : isolate_(electron::JavascriptEnvironment::GetIsolate()) {}
 
 ErrorThrower::~ErrorThrower() = default;
 

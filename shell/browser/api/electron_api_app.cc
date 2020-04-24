@@ -808,7 +808,7 @@ void App::RenderProcessReady(content::RenderProcessHost* host) {
   content::WebContents* web_contents =
       ElectronBrowserClient::Get()->GetWebContentsFromProcessID(host->GetID());
   if (web_contents) {
-    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
     v8::HandleScope scope(isolate);
     WebContents::FromOrCreate(isolate, web_contents);
   }

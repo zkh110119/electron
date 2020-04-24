@@ -337,8 +337,7 @@ v8::Local<v8::Promise> Session::ResolveProxy(gin_helper::Arguments* args) {
 }
 
 v8::Local<v8::Promise> Session::GetCacheSize() {
-  auto* isolate = v8::Isolate::GetCurrent();
-  gin_helper::Promise<int64_t> promise(isolate);
+  gin_helper::Promise<int64_t> promise(JavascriptEnvironment::GetIsolate());
   auto handle = promise.GetHandle();
 
   content::BrowserContext::GetDefaultStoragePartition(browser_context_.get())
@@ -361,8 +360,7 @@ v8::Local<v8::Promise> Session::GetCacheSize() {
 }
 
 v8::Local<v8::Promise> Session::ClearCache() {
-  auto* isolate = v8::Isolate::GetCurrent();
-  gin_helper::Promise<void> promise(isolate);
+  gin_helper::Promise<void> promise(JavascriptEnvironment::GetIsolate());
   auto handle = promise.GetHandle();
 
   content::BrowserContext::GetDefaultStoragePartition(browser_context_.get())
@@ -554,8 +552,7 @@ v8::Local<v8::Promise> Session::ClearHostResolverCache(
 }
 
 v8::Local<v8::Promise> Session::ClearAuthCache() {
-  auto* isolate = v8::Isolate::GetCurrent();
-  gin_helper::Promise<void> promise(isolate);
+  gin_helper::Promise<void> promise(JavascriptEnvironment::GetIsolate());
   v8::Local<v8::Promise> handle = promise.GetHandle();
 
   content::BrowserContext::GetDefaultStoragePartition(browser_context_.get())
@@ -680,8 +677,8 @@ v8::Local<v8::Promise> Session::LoadExtension(
              const std::string& error_msg) {
             if (extension) {
               if (!error_msg.empty()) {
-                node::Environment* env =
-                    node::Environment::GetCurrent(v8::Isolate::GetCurrent());
+                node::Environment* env = node::Environment::GetCurrent(
+                    JavascriptEnvironment::GetIsolate());
                 EmitWarning(env, error_msg, "ExtensionLoadWarning");
               }
               promise.Resolve(extension);
