@@ -71,6 +71,7 @@ class IPCRenderer : public gin::Wrappable<IPCRenderer> {
             bool internal,
             const std::string& channel,
             v8::Local<v8::Value> arguments) {
+    LOG(ERROR) << "==== send" << channel;
     blink::CloneableMessage message;
     if (!electron::SerializeV8Value(isolate, arguments, &message)) {
       return;
@@ -82,6 +83,7 @@ class IPCRenderer : public gin::Wrappable<IPCRenderer> {
                                 bool internal,
                                 const std::string& channel,
                                 v8::Local<v8::Value> arguments) {
+    LOG(ERROR) << "==== invoke" << channel;
     blink::CloneableMessage message;
     if (!electron::SerializeV8Value(isolate, arguments, &message)) {
       return v8::Local<v8::Promise>();
@@ -104,6 +106,7 @@ class IPCRenderer : public gin::Wrappable<IPCRenderer> {
                    const std::string& channel,
                    v8::Local<v8::Value> message_value,
                    base::Optional<v8::Local<v8::Value>> transfer) {
+    LOG(ERROR) << "==== post message" << channel;
     blink::TransferableMessage transferable_message;
     if (!electron::SerializeV8Value(isolate, message_value,
                                     &transferable_message)) {
@@ -142,6 +145,7 @@ class IPCRenderer : public gin::Wrappable<IPCRenderer> {
               int32_t web_contents_id,
               const std::string& channel,
               v8::Local<v8::Value> arguments) {
+    LOG(ERROR) << "==== sentto" << channel;
     blink::CloneableMessage message;
     if (!electron::SerializeV8Value(isolate, arguments, &message)) {
       return;
@@ -153,6 +157,7 @@ class IPCRenderer : public gin::Wrappable<IPCRenderer> {
   void SendToHost(v8::Isolate* isolate,
                   const std::string& channel,
                   v8::Local<v8::Value> arguments) {
+    LOG(ERROR) << "==== sendtohost" << channel;
     blink::CloneableMessage message;
     if (!electron::SerializeV8Value(isolate, arguments, &message)) {
       return;
@@ -164,6 +169,7 @@ class IPCRenderer : public gin::Wrappable<IPCRenderer> {
                                 bool internal,
                                 const std::string& channel,
                                 v8::Local<v8::Value> arguments) {
+    LOG(ERROR) << "==== sendsync" << channel;
     blink::CloneableMessage message;
     if (!electron::SerializeV8Value(isolate, arguments, &message)) {
       return v8::Local<v8::Value>();

@@ -9,7 +9,7 @@ function genSnapshot (browserWindow: BrowserWindow, features: string) {
     browserWindow.webContents.on('new-window', (...args: any[]) => {
       resolve([features, ...args]);
     });
-    browserWindow.webContents.executeJavaScript(`window.open('about:blank', 'frame name', '${features}')`);
+    browserWindow.webContents.executeJavaScript(`window.open('about:blank', 'frame name', '${features}') && true`);
   });
 }
 
@@ -52,7 +52,7 @@ describe('new-window event', () => {
       beforeEach((done) => {
         browserWindow = new BrowserWindow(browserWindowOptions);
         browserWindow.loadURL('about:blank');
-        browserWindow.on('ready-to-show', () => done());
+        browserWindow.on('ready-to-show', () => { browserWindow.show(); done(); });
       });
 
       afterEach(closeAllWindows);
@@ -111,7 +111,7 @@ describe('webContents.setWindowOpenOverride', () => {
       beforeEach((done) => {
         browserWindow = new BrowserWindow(browserWindowOptions);
         browserWindow.loadURL('about:blank');
-        browserWindow.on('ready-to-show', () => done());
+        browserWindow.on('ready-to-show', () => { browserWindow.show(); done(); });
       });
 
       afterEach(closeAllWindows);
@@ -126,7 +126,7 @@ describe('webContents.setWindowOpenOverride', () => {
           assert.fail('did-create-window should not to be called with an overridden window.open');
         });
 
-        browserWindow.webContents.executeJavaScript(`window.open('about:blank')`);
+        browserWindow.webContents.executeJavaScript(`window.open('about:blank') && true`);
 
         setTimeout(() => {
           done();
@@ -146,13 +146,15 @@ describe('webContents.setWindowOpenOverride', () => {
           didCreateWindowWasCalled = true;
         });
 
-        browserWindow.webContents.executeJavaScript(`window.open('about:blank')`);
+        setTimeout(() => {
+          browserWindow.webContents.executeJavaScript(`window.open('https://google.com') && true`);
+        }, 1433);
 
         setTimeout(() => {
           expect(newWindowWasCalled).to.be.true();
           expect(didCreateWindowWasCalled).to.be.true();
           done();
-        }, 250);
+        }, 15000);
       });
 
       it('fires window creation event with new options', (done) => {
@@ -163,7 +165,7 @@ describe('webContents.setWindowOpenOverride', () => {
           done();
         });
 
-        browserWindow.webContents.executeJavaScript(`window.open('about:blank')`);
+        browserWindow.webContents.executeJavaScript(`window.open('about:blank') && true`);
       });
     });
   }

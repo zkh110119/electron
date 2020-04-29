@@ -799,6 +799,7 @@ void App::BrowserChildProcessKilled(
 }
 
 void App::RenderProcessReady(content::RenderProcessHost* host) {
+  LOG(ERROR) << "=== App::RenderProcessReady";
   ChildProcessLaunched(content::PROCESS_TYPE_RENDERER,
                        host->GetProcess().Handle());
 

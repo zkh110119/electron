@@ -103,6 +103,7 @@ WebContentsPreferences::WebContentsPreferences(
     content::WebContents* web_contents,
     const gin_helper::Dictionary& web_preferences)
     : web_contents_(web_contents) {
+  LOG(ERROR) << "==== WebContentsPreferences::WebContentsPreferences";
   v8::Isolate* isolate = web_preferences.isolate();
   gin_helper::Dictionary copied(isolate, web_preferences.GetHandle()->Clone());
   // Following fields should not be stored.
@@ -269,6 +270,7 @@ WebContentsPreferences* WebContentsPreferences::From(
 void WebContentsPreferences::AppendCommandLineSwitches(
     base::CommandLine* command_line,
     bool is_subframe) {
+  LOG(ERROR) << "===== WebContentsPreferences::AppendCommandLineSwitches";
   // Check if plugins are enabled.
   if (IsEnabled(options::kPlugins))
     command_line->AppendSwitch(switches::kEnablePlugins);
@@ -427,6 +429,7 @@ void WebContentsPreferences::AppendCommandLineSwitches(
 
 void WebContentsPreferences::OverrideWebkitPrefs(
     content::WebPreferences* prefs) {
+  LOG(ERROR) << "==== WebContentsPreferences::OverrideWebkitPref";
   prefs->javascript_enabled =
       IsEnabled(options::kJavaScript, true /* default_value */);
   prefs->images_enabled = IsEnabled(options::kImages, true /* default_value */);

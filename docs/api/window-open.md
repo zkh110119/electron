@@ -3,8 +3,8 @@
 Often, developers will want to control how windows are created from trusted or
 untrusted content within a renderer. Windows can be created from the renderer in two ways:
 
-1. clicking on links or submitting forms adorned with `target=_blank`
-2. JavaScript calling `window.open()`
+- clicking on links or submitting forms adorned with `target=_blank`
+- JavaScript calling `window.open()`
 
 By default, this results in the creation of a
 [`BrowserWindowProxy`](browser-window-proxy.md), a light wrapper around

@@ -415,6 +415,7 @@ WebContents::WebContents(v8::Isolate* isolate,
     : content::WebContentsObserver(web_contents.get()),
       type_(type),
       weak_factory_(this) {
+  LOG(ERROR) << "=== WebContents::WebContents3";
   DCHECK(type != Type::REMOTE)
       << "Can't take ownership of a remote WebContents";
   auto session = Session::CreateFrom(isolate, GetBrowserContext());
@@ -426,6 +427,7 @@ WebContents::WebContents(v8::Isolate* isolate,
 WebContents::WebContents(v8::Isolate* isolate,
                          const gin_helper::Dictionary& options)
     : weak_factory_(this) {
+  LOG(ERROR) << "=== WebContents::WebContents2";
   // Read options.
   options.Get("backgroundThrottling", &background_throttling_);
 
@@ -525,6 +527,7 @@ void WebContents::InitWithSessionAndOptions(
     std::unique_ptr<content::WebContents> owned_web_contents,
     gin::Handle<api::Session> session,
     const gin_helper::Dictionary& options) {
+  LOG(ERROR) << "==== WebContents::InitWithSessionAndOptions";
   Observe(owned_web_contents.get());
   // TODO(zcbenz): Make InitWithWebContents take unique_ptr.
   // At the time of writing we are going through a refactoring and I don't want
@@ -656,6 +659,7 @@ void WebContents::WebContentsCreatedWithFullParams(
     int opener_render_frame_id,
     const content::mojom::CreateNewWindowParams& params,
     content::WebContents* new_contents) {
+  LOG(ERROR) << "===== WebContents::WebContentsCreatedWithFullParams";
   ChildWebContentsTracker::CreateForWebContents(new_contents);
   auto* tracker = ChildWebContentsTracker::FromWebContents(new_contents);
   tracker->url = params.target_url;
@@ -671,6 +675,7 @@ bool WebContents::IsWebContentsCreationOverridden(
     const GURL& opener_url,
     const std::string& frame_name,
     const GURL& target_url) {
+  LOG(ERROR) << "===== WebContents::IsWebContentsCreationOverridden";
   if (Emit("-will-add-new-contents", target_url, frame_name)) {
     return true;
   }
@@ -698,6 +703,7 @@ void WebContents::AddNewContents(
     bool* was_blocked) {
   auto* tracker = ChildWebContentsTracker::FromWebContents(new_contents.get());
   DCHECK(tracker);
+  LOG(ERROR) << "=== WebContents::AddNewContents";
 
   v8::Locker locker(isolate());
   v8::HandleScope handle_scope(isolate());

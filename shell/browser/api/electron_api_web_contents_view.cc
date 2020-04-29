@@ -97,6 +97,7 @@ gin_helper::WrappableBase* WebContentsView::New(
     gin_helper::Arguments* args,
     const gin_helper::Dictionary& web_preferences) {
   // Check if BrowserWindow has passend |webContents| option to us.
+  LOG(ERROR) << "=== WebContentsView::New";
   gin::Handle<WebContents> web_contents;
   if (web_preferences.GetHidden("webContents", &web_contents) &&
       !web_contents.IsEmpty()) {

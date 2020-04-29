@@ -503,6 +503,7 @@ ElectronBrowserClient::GetTtsControllerDelegate() {
 void ElectronBrowserClient::OverrideWebkitPrefs(
     content::RenderViewHost* host,
     content::WebPreferences* prefs) {
+  LOG(ERROR) << "==== ElectronBrowserClient::OverrideWebkitPrefs";
   prefs->javascript_enabled = true;
   prefs->web_security_enabled = true;
   prefs->plugins_enabled = true;
@@ -618,6 +619,7 @@ void ElectronBrowserClient::AppendExtraCommandLineSwitches(
     base::CommandLine* command_line,
     int process_id) {
   // Make sure we're about to launch a known executable
+  LOG(ERROR) << "==== ElectronBrowserClient::AppendExtraCommandLineSwitches";
   {
     base::ThreadRestrictions::ScopedAllowIO allow_io;
     base::FilePath child_path;

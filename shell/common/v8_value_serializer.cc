@@ -30,6 +30,7 @@ class V8Serializer : public v8::ValueSerializer::Delegate {
     bool wrote_value;
     if (!serializer_.WriteValue(isolate_->GetCurrentContext(), value)
              .To(&wrote_value)) {
+      CHECK(false);
       isolate_->ThrowException(v8::Exception::Error(
           gin::StringToV8(isolate_, "An object could not be cloned.")));
       return false;
