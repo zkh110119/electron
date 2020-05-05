@@ -183,7 +183,12 @@ int NodeMain(int argc, char* argv[]) {
 
     // TODO(codebytere): we should try to handle this upstream.
     {
-      v8::HandleScope scope(isolate);
+      v8::HandleScope handle_scope(isolate);
+
+      // The v8::Context needs to be entered when node::CreateEnvironment() and
+      // node::LoadEnvironment() are being called.
+      v8::Context::Scope context_scope(gin_env.context());
+
       node::InternalCallbackScope callback_scope(
           env, v8::Local<v8::Object>(), {1, 0},
           node::InternalCallbackScope::kAllowEmptyResource |
@@ -192,11 +197,15 @@ int NodeMain(int argc, char* argv[]) {
     }
 
     {
+      // SealHandleScope protects against handle leaks from callbacks.
       v8::SealHandleScope seal(isolate);
       bool more;
       do {
         uv_run(env->event_loop(), UV_RUN_DEFAULT);
 
+        // V8 tasks on background threads may end up scheduling new tasks in the
+        // foreground, which in turn can keep the event loop going. For example,
+        // WebAssembly.compile() may do so.
         gin_env.platform()->DrainTasks(isolate);
 
         more = uv_loop_alive(env->event_loop());
@@ -204,6 +213,8 @@ int NodeMain(int argc, char* argv[]) {
           continue;
 
         if (!uv_loop_alive(env->event_loop())) {
+          // node::EmitBeforeExit() is used to emit the 'beforeExit' event on
+          // the `process` object.
           EmitBeforeExit(env);
         }
 
