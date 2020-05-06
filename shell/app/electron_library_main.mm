@@ -20,6 +20,7 @@ int ElectronMain(int argc, char* argv[]) {
   params.argc = argc;
   params.argv = const_cast<const char**>(argv);
   electron::ElectronCommandLine::Init(argc, argv);
+  LOG(ERROR) << "==NEW PROCESS??";
   return content::ContentMain(params);
 }
 

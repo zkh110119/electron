@@ -1,7 +1,7 @@
-const { hasSwitch } = process.electronBinding('command_line');
+const { getWebPreference } = process.electronBinding('webFrame');
 const binding = process.electronBinding('context_bridge');
 
-const contextIsolationEnabled = hasSwitch('context-isolation');
+const contextIsolationEnabled = getWebPreference('contextIsolation');
 
 const checkContextIsolationEnabled = () => {
   if (!contextIsolationEnabled) throw new Error('contextBridge API can only be used when contextIsolation is enabled');

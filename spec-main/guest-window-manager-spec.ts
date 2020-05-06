@@ -134,7 +134,7 @@ describe('webContents.setWindowOpenOverride', () => {
       });
 
       it('does fire window creation events if an override returns true', (done) => {
-        browserWindow.webContents.setWindowOpenOverride(() => true);
+        browserWindow.webContents.setWindowOpenOverride(() => ({ backgroundColor: '#FFC0CB' }));
 
         let newWindowWasCalled = false;
         let didCreateWindowWasCalled = false;
@@ -147,7 +147,7 @@ describe('webContents.setWindowOpenOverride', () => {
         });
 
         setTimeout(() => {
-          browserWindow.webContents.executeJavaScript(`window.open('https://google.com') && true`);
+          browserWindow.webContents.executeJavaScript(`window.open('http://slowwly.robertomurray.co.uk/delay/3000/url/http://www.google.com') && true`);
         }, 1433);
 
         setTimeout(() => {

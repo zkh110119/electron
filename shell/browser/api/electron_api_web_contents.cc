@@ -557,7 +557,9 @@ void WebContents::InitWithSessionAndOptions(
     prefs->caret_blink_interval = *interval;
 
   // Save the preferences in C++.
-  new WebContentsPreferences(web_contents(), options);
+  if (!WebContentsPreferences::From(web_contents())) {
+    new WebContentsPreferences(web_contents(), options);
+  }
 
   WebContentsPermissionHelper::CreateForWebContents(web_contents());
   SecurityStateTabHelper::CreateForWebContents(web_contents());
@@ -667,6 +669,15 @@ void WebContents::WebContentsCreatedWithFullParams(
   tracker->referrer = params.referrer.To<content::Referrer>();
   tracker->raw_features = params.raw_features;
   tracker->body = params.body;
+
+  v8::HandleScope scope(isolate());
+  v8::Local<v8::Value> val =
+      gin::ConvertToV8(isolate(), pending_child_web_preferences_);
+
+  gin_helper::Dictionary dict;
+  gin::ConvertFromV8(isolate(), val, &dict);
+
+  new WebContentsPreferences(new_contents, dict);
 }
 
 bool WebContents::IsWebContentsCreationOverridden(
@@ -680,6 +691,18 @@ bool WebContents::IsWebContentsCreationOverridden(
     return true;
   }
   return false;
+}
+
+void WebContents::OverrideWebkitPrefs(content::WebContents* new_web_contents,
+                                      content::WebPreferences* default_prefs) {
+  auto* prefs = WebContentsPreferences::From(new_web_contents);
+  prefs->OverrideWebkitPrefs(default_prefs);
+}
+
+void WebContents::SetNextChildWebPreferences(
+    const gin_helper::Dictionary preferences) {
+  gin::ConvertFromV8(isolate(), preferences.GetHandle(),
+                     &pending_child_web_preferences_);
 }
 
 content::WebContents* WebContents::CreateCustomWebContents(
@@ -1550,8 +1573,10 @@ void WebContents::LoadURL(const GURL& url,
     std::string color_name;
     if (web_preferences->GetPreference(options::kBackgroundColor,
                                        &color_name)) {
+      LOG(ERROR) << "WebContents::LoadURL color" << color_name;
       view->SetBackgroundColor(ParseHexColor(color_name));
     } else {
+      LOG(ERROR) << "WebContents::LoadURL color none";
       view->SetBackgroundColor(SK_ColorTRANSPARENT);
     }
   }
@@ -2791,6 +2816,8 @@ void WebContents::BuildPrototype(v8::Isolate* isolate,
       .SetMethod("_getPrinters", &WebContents::GetPrinterList)
       .SetMethod("_printToPDF", &WebContents::PrintToPDF)
 #endif
+      .SetMethod("_setNextChildWebPreferences",
+                 &WebContents::SetNextChildWebPreferences)
       .SetMethod("addWorkSpace", &WebContents::AddWorkSpace)
       .SetMethod("removeWorkSpace", &WebContents::RemoveWorkSpace)
       .SetMethod("showDefinitionForSelection",

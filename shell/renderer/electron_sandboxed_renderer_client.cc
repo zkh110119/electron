@@ -9,6 +9,7 @@
 #include "base/files/file_path.h"
 #include "base/path_service.h"
 #include "base/process/process_handle.h"
+#include "content/public/common/web_preferences.h"
 #include "content/public/renderer/render_frame.h"
 #include "electron/buildflags/buildflags.h"
 #include "shell/common/api/electron_bindings.h"
@@ -198,8 +199,7 @@ void ElectronSandboxedRendererClient::DidCreateScriptContext(
   bool is_devtools =
       IsDevTools(render_frame) || IsDevToolsExtension(render_frame);
   bool allow_node_in_sub_frames =
-      base::CommandLine::ForCurrentProcess()->HasSwitch(
-          switches::kNodeIntegrationInSubFrames);
+      render_frame->GetWebkitPreferences().node_integration_in_sub_frames;
   bool should_load_preload =
       (is_main_frame || is_devtools || allow_node_in_sub_frames) &&
       !IsWebViewFrame(context, render_frame);

@@ -162,11 +162,14 @@ void NativeWindow::InitFromOptions(const gin_helper::Dictionary& options) {
   }
 #endif
   std::string color;
+  LOG(ERROR) << "NativeWindow";
   if (options.Get(options::kBackgroundColor, &color)) {
+    LOG(ERROR) << "NativeWindow color" << color;
     SetBackgroundColor(ParseHexColor(color));
   } else if (!transparent()) {
     // For normal window, use white as default background.
     SetBackgroundColor(SK_ColorWHITE);
+    LOG(ERROR) << "NativeWindow color default white";
   }
   std::string title(Browser::Get()->GetName());
   options.Get(options::kTitle, &title);

@@ -530,13 +530,24 @@ void ElectronBrowserClient::OverrideWebkitPrefs(
                                       ? blink::PreferredColorScheme::kDark
                                       : blink::PreferredColorScheme::kLight;
 
+  auto* web_contents = content::WebContents::FromRenderViewHost(host);
+  auto preloads =
+      SessionPreferences::GetValidPreloads(web_contents->GetBrowserContext());
+  if (!preloads.empty())
+    prefs->preloads = base::JoinString(preloads, kPathDelimiter);
+  if (CanUseCustomSiteInstance())
+    prefs->disable_electron_site_instance_overrides = true;
+
   SetFontDefaults(prefs);
 
   // Custom preferences of guest page.
-  auto* web_contents = content::WebContents::FromRenderViewHost(host);
   auto* web_preferences = WebContentsPreferences::From(web_contents);
-  if (web_preferences)
+  if (web_preferences) {
+    LOG(ERROR) << "--- did override";
     web_preferences->OverrideWebkitPrefs(prefs);
+  } else {
+    LOG(ERROR) << "--- did not override";
+  }
 }
 
 void ElectronBrowserClient::SetCanUseCustomSiteInstance(bool should_disable) {
@@ -684,16 +695,6 @@ void ElectronBrowserClient::AppendExtraCommandLineSwitches(
       if (web_preferences)
         web_preferences->AppendCommandLineSwitches(
             command_line, IsRendererSubFrame(process_id));
-      auto preloads = SessionPreferences::GetValidPreloads(
-          web_contents->GetBrowserContext());
-      if (!preloads.empty())
-        command_line->AppendSwitchNative(
-            switches::kPreloadScripts,
-            base::JoinString(preloads, kPathDelimiter));
-      if (CanUseCustomSiteInstance()) {
-        command_line->AppendSwitch(
-            switches::kDisableElectronSiteInstanceOverrides);
-      }
     }
   }
 }

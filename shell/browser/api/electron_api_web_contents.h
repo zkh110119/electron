@@ -213,6 +213,8 @@ class WebContents : public gin_helper::TrackableObject<WebContents>,
   v8::Local<v8::Promise> PrintToPDF(base::DictionaryValue settings);
 #endif
 
+  void SetNextChildWebPreferences(const gin_helper::Dictionary);
+
   // DevTools workspace api.
   void AddWorkSpace(gin_helper::Arguments* args, const base::FilePath& path);
   void RemoveWorkSpace(gin_helper::Arguments* args, const base::FilePath& path);
@@ -390,6 +392,8 @@ class WebContents : public gin_helper::TrackableObject<WebContents>,
       const GURL& opener_url,
       const std::string& frame_name,
       const GURL& target_url) override;
+  void OverrideWebkitPrefs(content::WebContents* new_web_contents,
+                           content::WebPreferences* prefs) override;
   content::WebContents* CreateCustomWebContents(
       content::RenderFrameHost* opener,
       content::SiteInstance* source_site_instance,
@@ -611,6 +615,9 @@ class WebContents : public gin_helper::TrackableObject<WebContents>,
 
   // Observers of this WebContents.
   base::ObserverList<ExtendedWebContentsObserver> observers_;
+
+  base::Value pending_child_web_preferences_ =
+      base::Value(base::Value::Type::DICTIONARY);
 
   // The ID of the process of the currently committed RenderViewHost.
   // -1 means no speculative RVH has been committed yet.

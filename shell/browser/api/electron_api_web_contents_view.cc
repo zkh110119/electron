@@ -70,6 +70,7 @@ void WebContentsView::WebContentsDestroyed() {
 gin::Handle<WebContentsView> WebContentsView::Create(
     v8::Isolate* isolate,
     const gin_helper::Dictionary& web_preferences) {
+  LOG(ERROR) << "=WebContentsView::Create";
   v8::Local<v8::Context> context = isolate->GetCurrentContext();
   v8::Local<v8::Value> arg = gin::ConvertToV8(isolate, web_preferences);
   v8::Local<v8::Object> obj;
