@@ -4,6 +4,7 @@
 
 #include "shell/common/api/electron_api_native_image.h"
 
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -38,7 +39,16 @@ gin::Handle<NativeImage> NativeImage::CreateFromNamedImage(
     const std::string& name) {
   @autoreleasepool {
     std::vector<double> hsl_shift;
-    NSImage* image = [NSImage imageNamed:base::SysUTF8ToNSString(name)];
+
+    // The string representations of NSImageNames don't match the strings
+    // themselves; they instead follow the following pattern:
+    //  * NSImageNameActionTemplate -> "NSActionTemplate"
+    //  * NSImageNameMultipleDocuments -> "NSMultipleDocuments"
+    // To account for this, we strip out "ImageName" from the passed string.
+    std::regex to_remove("ImageName");
+    std::string named_image = std::regex_replace(name, to_remove, "");
+    NSImage* image = [NSImage imageNamed:base::SysUTF8ToNSString(named_image)];
+
     if (!image.valid) {
       return CreateEmpty(args->isolate());
     }
